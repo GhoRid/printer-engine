@@ -1,0 +1,4 @@
+/Users/pgh5489/projects/printer-engine/build/CMakeFiles/printer_engine.dir
+/Users/pgh5489/projects/printer-engine/build/CMakeFiles/printer_engine_test.dir
+/Users/pgh5489/projects/printer-engine/build/CMakeFiles/edit_cache.dir
+/Users/pgh5489/projects/printer-engine/build/CMakeFiles/rebuild_cache.dir

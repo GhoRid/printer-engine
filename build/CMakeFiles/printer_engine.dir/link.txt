@@ -1,0 +1,2 @@
+/usr/bin/ar qc libprinter_engine.a CMakeFiles/printer_engine.dir/src/printer_engine.cpp.o
+/usr/bin/ranlib libprinter_engine.a
