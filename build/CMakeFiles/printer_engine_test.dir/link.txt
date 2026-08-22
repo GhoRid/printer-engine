@@ -1,1 +1,0 @@
-/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/printer_engine_test.dir/tests/main.cpp.o -o printer_engine_test  libprinter_engine.a

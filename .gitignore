@@ -1,0 +1,19 @@
+# Build output
+**/build/
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Node / Electron
+node_modules/
+
+# Logs
+*.log
