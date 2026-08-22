@@ -4,18 +4,18 @@
 #include <string>
 
 struct PE_Printer {
-    std::string printerType;
+    std::string printerType;  //c++은  string타입 없음. std = C++ 표준 라이브러리(ex. stdio), string = 그 안에 있는 문자열 타입
     std::string port;
 
-    int baudRate = 0;
-    int dataBits = 0;
-    int stopBits = 0;
-    int parity = 0;
+    int baudRate = 0;        // 통신 속도 (초당 전송 비트 수, 예: 9600, 115200)
+    int dataBits = 0;        // 한 번에 전송하는 데이터 비트 수 (보통 8)
+    int stopBits = 0;        // 데이터 전송 종료를 알리는 비트 수 (보통 1)
+    int parity = 0;          // 통신 오류 검사용 패리티 설정 (없음/홀수/짝수 등)
 
-    int dpi = 0;
-    int printWidthDots = 0;
+    int dpi = 0;             // 프린터 해상도 (1인치당 점의 개수, 예: 203dpi)
+    int printWidthDots = 0;  // 실제 인쇄 가능한 가로 폭을 dot 단위로 저장
 
-    bool initialized = false;
+    bool initialized = false; // 프린터 초기화 완료 여부
 };
 
 PE_Printer* pe_create(void)
@@ -35,7 +35,7 @@ PE_Result pe_initialize(
     printer->printerType =
         config->printer_type
             ? config->printer_type
-            : "";
+            : "";            
 
     printer->port =
         config->port
@@ -53,7 +53,7 @@ PE_Result pe_initialize(
 
     printer->initialized = true;
 
-    std::cout
+    std::cout  // std:cout = console.log (cout = character output. 문자 출력)
         << "Printer initialized\n"
         << "type: " << printer->printerType << '\n'
         << "port: " << printer->port << '\n'

@@ -24,7 +24,7 @@ int main()
         );
 
     if (result != PE_OK) {
-        std::cerr
+        std::cerr  //에러 출력(character error)
             << "Initialize failed\n";
 
         pe_destroy(printer);
