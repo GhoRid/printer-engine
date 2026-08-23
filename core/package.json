@@ -1,5 +1,5 @@
 {
-  "name": "@printer-engine/native",
+  "name": "@ghorid/printer-engine",
   "version": "0.1.0",
   "main": "node/index.js",
   "types": "node/index.d.ts",
