@@ -10,6 +10,19 @@ set(CMAKE_CXX_STANDARD 20) # C++20 표준을 사용하도록 설정
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # 반드시 C++20을 지원하는 컴파일러 사용
 set(CMAKE_CXX_EXTENSIONS OFF) # 컴파일러 고유 확장 기능을 끄고 표준 C++20을 사용하겠다
 
+# Qt에서 사용하는 자동 코드 생성 기능 활성화
+set(CMAKE_AUTOMOC ON) # Q_OBJECT가 있는 클래스를 자동으로 처리
+set(CMAKE_AUTOUIC ON) # Qt Designer의 .ui 파일을 자동으로 처리
+set(CMAKE_AUTORCC ON) # Qt 리소스 .qrc 파일을 자동으로 처리
+
+# Qt6 GUI 모듈 찾기
+find_package(
+    Qt6
+    REQUIRED
+    COMPONENTS
+    Widgets
+)
+
 add_library(
     printer_engine # printer_engine이라는 라이브러리를 만들어라
     STATIC # 정적으로
@@ -18,6 +31,13 @@ add_library(
     src/bixolon.cpp
     src/layout_engine.cpp
     src/receipt_engine.cpp
+)
+
+# 나중에 Node.js addon 같은 공유 라이브러리에서도 printer_engine을 사용할 수 있게 설정
+set_target_properties(
+    printer_engine
+    PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
 )
 
 # 운영체제에 따라서 사용할 시리얼 구현 파일을 선택
@@ -47,7 +67,21 @@ target_include_directories( # 헤더 파일 경로 찾기
     ${CMAKE_CURRENT_SOURCE_DIR}/src/serial # serial_port.h가 들어있는 경로
 )
 
-# 실제 실행파일을 만드는 부분
+# 실제 배포용 GUI 실행파일을 만드는 부분
+add_executable(
+    printer_engine_app
+    WIN32 # Windows에서 실행할 때 검은 콘솔창 없이 GUI 앱으로 실행
+    app/main.cpp
+)
+
+target_link_libraries(
+    printer_engine_app # printer_engine_app 실행파일이
+    PRIVATE
+    printer_engine # printer_engine 라이브러리를 사용하도록 해라
+    Qt6::Widgets # Qt GUI 기능을 사용하도록 연결
+)
+
+# 테스트용 실행파일을 만드는 부분
 add_executable(
     printer_engine_test # 실행파일 이름 printer_engine_test
     tests/main.cpp # 이 소스를 통해서
