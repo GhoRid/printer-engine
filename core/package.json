@@ -1,0 +1,23 @@
+{
+  "name": "@printer-engine/native",
+  "version": "0.1.0",
+  "main": "node/index.js",
+  "types": "node/index.d.ts",
+  "files": [
+    "node/index.js",
+    "node/index.d.ts",
+    "build/Release/printer_engine_node.node"
+  ],
+  "scripts": {
+    "build:native": "cmake-js compile",
+    "build:win32": "cmake-js compile --arch ia32",
+    "build:win64": "cmake-js compile --arch x64",
+    "rebuild:native": "cmake-js rebuild"
+  },
+  "dependencies": {
+    "node-addon-api": "^8.0.0"
+  },
+  "devDependencies": {
+    "cmake-js": "^8.0.0"
+  }
+}

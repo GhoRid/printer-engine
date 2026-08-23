@@ -67,6 +67,43 @@ target_include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
 )
 
+# cmake-js로 실행할 때만 Node.js addon을 만든다.
+if(DEFINED CMAKE_JS_VERSION)
+    add_library(
+        printer_engine_node
+        SHARED
+        node/addon.cpp
+        ${CMAKE_JS_SRC}
+    )
+
+    set_target_properties(
+        printer_engine_node
+        PROPERTIES
+        PREFIX ""
+        SUFFIX ".node"
+    )
+
+    target_include_directories(
+        printer_engine_node
+        PRIVATE
+        ${CMAKE_JS_INC}
+        ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api
+    )
+
+    target_compile_definitions(
+        printer_engine_node
+        PRIVATE
+        NAPI_VERSION=8
+    )
+
+    target_link_libraries(
+        printer_engine_node
+        PRIVATE
+        printer_engine
+        ${CMAKE_JS_LIB}
+    )
+endif()
+
 # Windows 실제 배포용 GUI 실행파일
 if(WIN32)
     add_executable(
