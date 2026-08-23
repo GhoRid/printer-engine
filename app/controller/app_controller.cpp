@@ -3,6 +3,8 @@
 #include "resource.h"
 #include "serial_port.h"
 
+#include <devguid.h>
+#include <setupapi.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -11,6 +13,42 @@ namespace {
 
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"PrinterEngineWindowClass";
 constexpr wchar_t WINDOW_TITLE[] = L"Printer Engine";
+
+std::wstring getPortLabel(const std::wstring& port)
+{
+    HDEVINFO devices = SetupDiGetClassDevsW(
+        &GUID_DEVCLASS_PORTS, nullptr, nullptr, DIGCF_PRESENT
+    );
+
+    if (devices == INVALID_HANDLE_VALUE) {
+        return port;
+    }
+
+    const std::wstring suffix = L"(" + port + L")";
+    std::wstring label = port;
+    SP_DEVINFO_DATA device{sizeof(device)};
+    wchar_t name[256];
+
+    for (DWORD index = 0; SetupDiEnumDeviceInfo(devices, index, &device); ++index) {
+        if (SetupDiGetDeviceRegistryPropertyW(
+                devices, &device, SPDRP_FRIENDLYNAME, nullptr,
+                reinterpret_cast<PBYTE>(name), sizeof(name), nullptr
+            ) && std::wstring(name).find(suffix) != std::wstring::npos) {
+            label += L" - ";
+            label += name;
+            break;
+        }
+    }
+
+    SetupDiDestroyDeviceInfoList(devices);
+    return label;
+}
+
+std::wstring portFromLabel(const std::wstring& label)
+{
+    const std::size_t separator = label.find(L" - ");
+    return label.substr(0, separator);
+}
 
 // UTF-8 std::string -> Windows UTF-16 std::wstring
 std::wstring utf8ToWide(const std::string& value)
@@ -527,9 +565,11 @@ void AppController::createWindowControls()
         const std::wstring widePort =
             utf8ToWide(port);
 
+        const std::wstring label = getPortLabel(widePort);
+
         addComboItem(
             portCombo_,
-            widePort.c_str()
+            label.c_str()
         );
     }
 
@@ -822,10 +862,15 @@ void AppController::loadSettingsToControls()
             utf8ToWide(settings_.port);
 
         // 실제 현재 존재하는 COM 포트인 경우에만 선택
-        if (!selectComboValue(
-            portCombo_,
-            port
-        )) {
+        const LRESULT index = SendMessageW(
+            portCombo_, CB_FINDSTRING, static_cast<WPARAM>(-1),
+            reinterpret_cast<LPARAM>((port + L" - ").c_str())
+        );
+
+        if (index != CB_ERR) {
+            SendMessageW(portCombo_, CB_SETCURSEL, static_cast<WPARAM>(index), 0);
+        }
+        else if (!selectComboValue(portCombo_, port)) {
             // 없는 COM 포트를 강제로 목록에 추가하지 않음
             selectComboValue(
                 portCombo_,
@@ -1020,7 +1065,7 @@ bool AppController::saveSettingsFromControls(bool notify)
         else {
             settings_.port =
                 wideToUtf8(
-                    port
+                    portFromLabel(port)
                 );
         }
 

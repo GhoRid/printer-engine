@@ -182,6 +182,7 @@ if(
 
         user32
         shell32
+        setupapi
         ws2_32
     )
 endif()
