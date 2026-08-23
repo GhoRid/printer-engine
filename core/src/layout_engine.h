@@ -9,9 +9,15 @@ namespace pe::layout {
 
 // 레이아웃 계산에 필요한 프린터 정보
 struct LayoutConfig {
-    int printWidthDots = 576;       // 전체 인쇄 가능 가로 폭
-    int asciiCharWidthDots = 12;    // ASCII 한 글자의 대략적인 폭
-    int minColumnGapDots = 24;      // 컬럼 사이 최소 간격
+    int printWidthDots = 576;        // 전체 인쇄 가능 가로 폭
+    int paddingLeftDots = 24;        // 왼쪽 여백
+    int paddingRightDots = 24;       // 오른쪽 여백
+    int asciiCharWidthDots = 12;     // ASCII 한 글자의 대략적인 폭
+    int minColumnGapDots = 24;       // 컬럼 사이 최소 간격
+
+    int contentWidthDots() const {
+        return printWidthDots - paddingLeftDots - paddingRightDots;
+    }
 };
 
 // 한 줄 안에서 출력될 텍스트 하나
