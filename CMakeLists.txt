@@ -13,13 +13,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Ninja / Makefile 계열에서 compile_commands.json 생성
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# MSVC에서 한글 소스가 깨지지 않도록 UTF-8 사용
+# MSVC에서 소스 파일을 UTF-8로 처리
 if(MSVC)
     add_compile_options(/utf-8)
 endif()
 
-# 엔진 내부에서 공통으로 사용하는 헤더 경로
-set(PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS
+# 엔진 내부 공통 헤더 경로
+set(
+    PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS
+
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
     ${CMAKE_CURRENT_SOURCE_DIR}/src/print
@@ -50,12 +52,14 @@ add_library(
     src/print/access_pass_print.cpp
 )
 
+# Node.js addon 같은 공유 라이브러리에서도 사용 가능하게 설정
 set_target_properties(
     printer_engine
     PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
+# printer_engine 헤더 경로
 target_include_directories(
     printer_engine
 
@@ -89,11 +93,12 @@ else()
     message(FATAL_ERROR "Unsupported operating system")
 endif()
 
-# cmake-js로 빌드할 때만 Node.js addon 생성
+# cmake-js로 실행할 때만 Node.js addon 생성
 if(DEFINED CMAKE_JS_VERSION)
     add_library(
         printer_engine_node
         SHARED
+
         node/addon.cpp
         ${CMAKE_JS_SRC}
     )
@@ -108,6 +113,7 @@ if(DEFINED CMAKE_JS_VERSION)
     target_include_directories(
         printer_engine_node
         PRIVATE
+
         ${CMAKE_JS_INC}
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
@@ -124,13 +130,13 @@ if(DEFINED CMAKE_JS_VERSION)
     target_link_libraries(
         printer_engine_node
         PRIVATE
+
         printer_engine
         ${CMAKE_JS_LIB}
     )
 endif()
 
 # Windows GUI 앱
-# app 폴더가 실제로 존재할 때만 빌드
 if(
     WIN32
     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/main.cpp"
@@ -138,6 +144,7 @@ if(
     add_executable(
         printer_engine_app
         WIN32
+
         app/main.cpp
         app/controller/app_controller.cpp
         app/settings/app_settings.cpp
@@ -148,8 +155,10 @@ if(
     target_include_directories(
         printer_engine_app
         PRIVATE
+
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
+
         ${CMAKE_CURRENT_SOURCE_DIR}/app
         ${CMAKE_CURRENT_SOURCE_DIR}/app/controller
         ${CMAKE_CURRENT_SOURCE_DIR}/app/settings
@@ -160,6 +169,7 @@ if(
     target_compile_definitions(
         printer_engine_app
         PRIVATE
+
         UNICODE
         _UNICODE
     )
@@ -167,7 +177,9 @@ if(
     target_link_libraries(
         printer_engine_app
         PRIVATE
+
         printer_engine
+
         user32
         shell32
         ws2_32
@@ -183,6 +195,7 @@ add_executable(
 target_include_directories(
     printer_engine_test
     PRIVATE
+
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
 )
@@ -202,6 +215,7 @@ add_executable(
 target_include_directories(
     print_router_test
     PRIVATE
+
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
 )
@@ -212,6 +226,7 @@ target_link_libraries(
     printer_engine
 )
 
+# CMake 테스트 기능 활성화
 enable_testing()
 
 add_test(

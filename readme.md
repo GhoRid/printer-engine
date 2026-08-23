@@ -130,3 +130,17 @@ npm publish
 - `x64` = 64비트
 - `printer_engine.lib`는 빌드용 정적 라이브러리이므로 앱 배포 시 필요하지 않습니다.
 - Windows 앱 배포 시 기본적으로 `printer_engine_app.exe`를 사용합니다.
+
+테스트
+
+윈도우 파우쉘
+$body = @{
+type = "access_pass"
+name = "박건형"
+department = "개발팀"
+qrValue = "https://example.com/pass/123"
+} | ConvertTo-Json
+
+Invoke-RestMethod `    -Uri "http://127.0.0.1:8080/print"`
+-Method Post `    -ContentType "application/json; charset=utf-8"`
+-Body $body
