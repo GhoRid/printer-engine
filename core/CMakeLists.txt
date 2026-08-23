@@ -23,6 +23,9 @@ add_library(
     src/bixolon.cpp
     src/layout_engine.cpp
     src/receipt_engine.cpp
+    src/print/print_router.cpp
+    src/print/receipt_print.cpp
+    src/print/access_pass_print.cpp
 )
 
 # 나중에 Node.js addon 같은 공유 라이브러리에서도 printer_engine을 사용할 수 있게 설정
@@ -78,6 +81,7 @@ if(WIN32)
         ${CMAKE_CURRENT_SOURCE_DIR}/app/settings
         ${CMAKE_CURRENT_SOURCE_DIR}/app/server
         ${CMAKE_CURRENT_SOURCE_DIR}/app/resources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/print
         ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
     )
 
@@ -124,4 +128,26 @@ enable_testing()
 add_test(
     NAME printer_engine_test
     COMMAND printer_engine_test
+)
+
+add_executable(
+    print_router_test
+    tests/print_router_test.cpp
+)
+
+target_include_directories(
+    print_router_test
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/print
+)
+
+target_link_libraries(
+    print_router_test
+    PRIVATE
+    printer_engine
+)
+
+add_test(
+    NAME print_router_test
+    COMMAND print_router_test
 )

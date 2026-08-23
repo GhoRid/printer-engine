@@ -17,6 +17,10 @@ class LocalServer {
 public:
     using EmptyHandler = std::function<HttpResponse()>;
     using BodyHandler = std::function<HttpResponse(const std::string& body)>;
+    using PrintHandler = std::function<HttpResponse(
+        const std::string& path,
+        const std::string& body
+    )>;
 
     LocalServer();
     ~LocalServer();
@@ -29,7 +33,7 @@ public:
     void setHealthHandler(EmptyHandler handler);
     void setGetSettingsHandler(EmptyHandler handler);
     void setUpdateSettingsHandler(BodyHandler handler);
-    void setPrintHandler(BodyHandler handler);
+    void setPrintHandler(PrintHandler handler);
 
 private:
     void serverLoop();
@@ -44,7 +48,7 @@ private:
     EmptyHandler healthHandler_;
     EmptyHandler getSettingsHandler_;
     BodyHandler updateSettingsHandler_;
-    BodyHandler printHandler_;
+    PrintHandler printHandler_;
 };
 
 #endif

@@ -388,7 +388,7 @@ void LocalServer::setUpdateSettingsHandler(
 }
 
 void LocalServer::setPrintHandler(
-    BodyHandler handler
+    PrintHandler handler
 )
 {
     printHandler_ = std::move(handler);
@@ -615,11 +615,13 @@ void LocalServer::handleClient(
         }
         else if (
             request.method == "POST" &&
-            request.path == "/print"
+            (request.path == "/print/receipt" ||
+             request.path == "/print/access-pass")
         ) {
             if (printHandler_) {
                 response =
                     printHandler_(
+                        request.path,
                         request.body
                     );
             }
@@ -698,7 +700,7 @@ void LocalServer::setUpdateSettingsHandler(
 }
 
 void LocalServer::setPrintHandler(
-    BodyHandler handler
+    PrintHandler handler
 )
 {
     printHandler_ = std::move(handler);

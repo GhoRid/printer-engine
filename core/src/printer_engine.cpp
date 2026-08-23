@@ -1,4 +1,5 @@
 #include "printer_engine.h"
+#include "printer_engine_internal.h"
 #include "serial_port.h"
 
 #include <iostream>
@@ -207,4 +208,18 @@ void pe_destroy(PE_Printer* printer)
     pe_shutdown(printer);
 
     delete printer;
+}
+
+SerialPort* pe_serial_port(PE_Printer* printer)
+{
+    if (!printer || !printer->initialized || !printer->serialPort.isOpen()) {
+        return nullptr;
+    }
+
+    return &printer->serialPort;
+}
+
+int pe_print_width_dots(const PE_Printer* printer)
+{
+    return printer ? printer->printWidthDots : 0;
 }

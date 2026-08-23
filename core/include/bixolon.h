@@ -18,6 +18,9 @@ public:
     // 문자열 출력
     bool printText(const std::string& text);
 
+    // 프린터 내장 QR 출력
+    bool printQr(const std::string& value, int moduleSize = 8);
+
     // 줄바꿈
     bool lineFeed(int lines = 1);
 

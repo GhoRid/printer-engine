@@ -4,6 +4,8 @@
 #include <windows.h>
 #include <shellapi.h>
 
+#include <mutex>
+
 #include "app_settings.h"
 #include "local_server.h"
 #include "printer_engine.h"
@@ -44,6 +46,7 @@ private:
 
     AppSettings settings_;
     PE_Printer* printer_ = nullptr;
+    std::mutex printerMutex_;
     LocalServer localServer_;
 
     NOTIFYICONDATAW trayIcon_{};

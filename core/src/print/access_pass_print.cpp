@@ -1,24 +1,35 @@
 #include "access_pass_print.h"
 
-#include "../bitmap.h"
-#include "../layout_engine.h"
-#include "../qr.h"
+#include "../printer_engine_internal.h"
+#include "bixolon.h"
+#include "serial_port.h"
 
-bool printAccessPass(const AccessPassPrintData& data)
+bool printAccessPass(PE_Printer* printerHandle, const AccessPassPrintData& data)
 {
-    // 출입증 UI
+    SerialPort* serialPort = pe_serial_port(printerHandle);
 
-    // Bitmap bitmap(576, ...);
-    //
-    // drawImage(bitmap, ...);
-    // drawText(bitmap, "출입증", ...);
-    // drawText(bitmap, data.name, ...);
-    // drawText(bitmap, data.department, ...);
-    //
-    // Bitmap qr = createQrBitmap(data.qrValue, 200);
-    // drawBitmap(bitmap, qr, ...);
-    //
-    // printer로 전송
+    if (!serialPort) {
+        return false;
+    }
 
-    return true;
+    Bixolon printer(*serialPort);
+
+    if (!printer.initialize() ||
+        !printer.alignCenter() ||
+        !printer.printText("출입증") ||
+        !printer.lineFeed(2) ||
+        !printer.printText(data.name) ||
+        !printer.lineFeed()) {
+        return false;
+    }
+
+    if (!data.department.empty() &&
+        (!printer.printText(data.department) || !printer.lineFeed())) {
+        return false;
+    }
+
+    return printer.lineFeed() &&
+        printer.printQr(data.qrValue) &&
+        printer.lineFeed(3) &&
+        printer.cut();
 }

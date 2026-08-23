@@ -1,4 +1,5 @@
 #include "app_controller.h"
+#include "print_router.h"
 #include "resource.h"
 #include "serial_port.h"
 
@@ -262,6 +263,8 @@ bool AppController::initializeSettings()
 
 bool AppController::initializePrinter()
 {
+    const std::lock_guard lock(printerMutex_);
+
     if (printer_ != nullptr) {
         pe_shutdown(printer_);
         pe_destroy(printer_);
@@ -1086,6 +1089,7 @@ void AppController::testPrint()
         return;
     }
 
+    const std::lock_guard lock(printerMutex_);
     const bool printed = pe_print_test(printer_) == PE_OK;
     appendLog(printed ? L"설정값 테스트 출력 완료." : L"테스트 출력 실패.");
     MessageBoxW(window_, printed ? L"설정값을 테스트 출력했습니다." : L"테스트 출력에 실패했습니다.",
@@ -1191,6 +1195,23 @@ void AppController::initializeLocalServer()
             }
 
             return response;
+        }
+    );
+
+    localServer_.setPrintHandler(
+        [this](const std::string& path, const std::string& body) {
+            const std::lock_guard lock(printerMutex_);
+            const PrintRouteResult result = routePrintRequest(
+                path,
+                body,
+                printer_
+            );
+
+            return HttpResponse{
+                result.statusCode,
+                "application/json",
+                result.body
+            };
         }
     );
 
