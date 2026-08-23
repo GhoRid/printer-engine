@@ -10,18 +10,10 @@ set(CMAKE_CXX_STANDARD 20) # C++20 표준을 사용하도록 설정
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # 반드시 C++20을 지원하는 컴파일러 사용
 set(CMAKE_CXX_EXTENSIONS OFF) # 컴파일러 고유 확장 기능을 끄고 표준 C++20을 사용하겠다
 
-# Qt에서 사용하는 자동 코드 생성 기능 활성화
-set(CMAKE_AUTOMOC ON) # Q_OBJECT가 있는 클래스를 자동으로 처리
-set(CMAKE_AUTOUIC ON) # Qt Designer의 .ui 파일을 자동으로 처리
-set(CMAKE_AUTORCC ON) # Qt 리소스 .qrc 파일을 자동으로 처리
-
-# Qt6 GUI 모듈 찾기
-find_package(
-    Qt6
-    REQUIRED
-    COMPONENTS
-    Widgets
-)
+# MSVC가 소스 파일을 UTF-8로 처리하도록 설정
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
 
 add_library(
     printer_engine # printer_engine이라는 라이브러리를 만들어라
@@ -59,27 +51,52 @@ else()
     message(FATAL_ERROR "Unsupported operating system")
 endif()
 
-target_include_directories( # 헤더 파일 경로 찾기
+target_include_directories(
     printer_engine
     PUBLIC # 자기 자신도, 다른 타겟도 이 경로를 공유
-    ${CMAKE_CURRENT_SOURCE_DIR}/include # CMAKE_CURRENT_SOURCE_DIR : 루트 경로
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE # printer_engine 내부에서만 사용하는 헤더 경로
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial # serial_port.h가 들어있는 경로
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
 )
 
-# 실제 배포용 GUI 실행파일을 만드는 부분
-add_executable(
-    printer_engine_app
-    WIN32 # Windows에서 실행할 때 검은 콘솔창 없이 GUI 앱으로 실행
-    app/main.cpp
-)
+# Windows 실제 배포용 GUI 실행파일
+if(WIN32)
+    add_executable(
+        printer_engine_app
+        WIN32
+        app/main.cpp
+        app/controller/app_controller.cpp
+        app/settings/app_settings.cpp
+        app/server/local_server.cpp
+        app/resources/app.rc
+    )
 
-target_link_libraries(
-    printer_engine_app # printer_engine_app 실행파일이
-    PRIVATE
-    printer_engine # printer_engine 라이브러리를 사용하도록 해라
-    Qt6::Widgets # Qt GUI 기능을 사용하도록 연결
-)
+    target_include_directories(
+        printer_engine_app
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/app/controller
+        ${CMAKE_CURRENT_SOURCE_DIR}/app/settings
+        ${CMAKE_CURRENT_SOURCE_DIR}/app/server
+        ${CMAKE_CURRENT_SOURCE_DIR}/app/resources
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
+    )
+
+    target_compile_definitions(
+        printer_engine_app
+        PRIVATE
+        UNICODE
+        _UNICODE
+    )
+
+    target_link_libraries(
+        printer_engine_app
+        PRIVATE
+        printer_engine
+        user32
+        shell32
+        ws2_32
+    )
+endif()
 
 # 테스트용 실행파일을 만드는 부분
 add_executable(
@@ -91,13 +108,13 @@ add_executable(
 target_include_directories(
     printer_engine_test
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial # serial_port.h가 private에 있으므로 테스트 코드에서 찾을 수 있도록 include 경로 추가
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
 )
 
 target_link_libraries(
-    printer_engine_test # printer_engine_test 실행파일이
+    printer_engine_test
     PRIVATE
-    printer_engine # printer_engine 라이브러리를 사용하도록 해라
+    printer_engine
 )
 
 # CMake의 테스트 기능 활성화

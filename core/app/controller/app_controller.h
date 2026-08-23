@@ -1,32 +1,85 @@
 #ifndef APP_CONTROLLER_H
 #define APP_CONTROLLER_H
 
-#include <string>
+#include <windows.h>
+#include <shellapi.h>
 
+#include "app_settings.h"
+#include "local_server.h"
 #include "printer_engine.h"
-#include "receipt_engine.h"
 
-class AppController {
-
+class AppController
+{
 public:
     AppController();
     ~AppController();
 
-    bool initialize(const PE_PrinterConfig& config);
-
-    bool printReceipt(const ReceiptData& receipt);
-
+    bool initialize(HINSTANCE hInstance);
     void shutdown();
 
-    bool isInitialized() const;
-
 private:
-    PE_Printer* printer_ = nullptr;
+    static constexpr UINT WM_TRAY_ICON = WM_APP + 1;
 
-    ReceiptEngine receiptEngine_;
+    static constexpr UINT ID_TRAY_OPEN = 1001;
+    static constexpr UINT ID_TRAY_EXIT = 1002;
+    static constexpr UINT ID_SAVE_SETTINGS = 2001;
+
+    HINSTANCE hInstance_ = nullptr;
+    HWND window_ = nullptr;
+
+    HWND printerTypeCombo_ = nullptr;
+    HWND portCombo_ = nullptr;
+    HWND baudRateCombo_ = nullptr;
+    HWND dataBitsCombo_ = nullptr;
+    HWND stopBitsCombo_ = nullptr;
+    HWND parityCombo_ = nullptr;
+    HWND dpiCombo_ = nullptr;
+    HWND printWidthCombo_ = nullptr;
+    HWND serverPortCombo_ = nullptr;
+    HWND statusLabel_ = nullptr;
+
+    AppSettings settings_;
+    PE_Printer* printer_ = nullptr;
+    LocalServer localServer_;
+
+    NOTIFYICONDATAW trayIcon_{};
 
     bool initialized_ = false;
+    bool printerReady_ = false;
+    bool trayInitialized_ = false;
+    bool shuttingDown_ = false;
 
+    bool initializeSettings();
+    bool initializePrinter();
+    bool initializeWindow();
+    bool initializeTray();
+    bool initializeLocalServer();
+
+    void createWindowControls();
+    void loadSettingsToControls();
+    bool saveSettingsFromControls();
+    void updateStatusLabel();
+
+    void showWindow();
+    void hideWindow();
+
+    void showTrayMenu();
+    void removeTrayIcon();
+    void requestExit();
+
+    LRESULT handleWindowMessage(
+        HWND hwnd,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam
+    );
+
+    static LRESULT CALLBACK WindowProc(
+        HWND hwnd,
+        UINT message,
+        WPARAM wParam,
+        LPARAM lParam
+    );
 };
 
 #endif

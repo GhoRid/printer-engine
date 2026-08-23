@@ -1,26 +1,88 @@
 #include "printer_engine.h"
+#include "serial_port.h"
 
 #include <iostream>
+#include <new>
 #include <string>
 
 struct PE_Printer {
-    std::string printerType;  //c++은  string타입 없음. std = C++ 표준 라이브러리(ex. stdio), string = 그 안에 있는 문자열 타입
-    std::string port;
+    std::string printerType; // std = C++ 표준 라이브러리 namespace, string = 문자열 클래스
+    std::string port;        // 시리얼 포트 이름 (예: COM3)
 
-    int baudRate = 0;        // 통신 속도 (초당 전송 비트 수, 예: 9600, 115200)
-    int dataBits = 0;        // 한 번에 전송하는 데이터 비트 수 (보통 8)
-    int stopBits = 0;        // 데이터 전송 종료를 알리는 비트 수 (보통 1)
-    int parity = 0;          // 통신 오류 검사용 패리티 설정 (없음/홀수/짝수 등)
+    int baudRate = 0;        // 통신 속도 (예: 9600, 115200)
+    int dataBits = 0;        // 데이터 비트 수 (보통 8)
+    int stopBits = 0;        // 정지 비트 수 (보통 1)
+    int parity = 0;          // 패리티 설정 (0: 없음, 1: 홀수, 2: 짝수 등)
 
-    int dpi = 0;             // 프린터 해상도 (1인치당 점의 개수, 예: 203dpi)
-    int printWidthDots = 0;  // 실제 인쇄 가능한 가로 폭을 dot 단위로 저장
+    int dpi = 0;             // 프린터 해상도 (예: 203dpi)
+    int printWidthDots = 0;  // 실제 인쇄 가능한 가로 폭(dot)
+
+    SerialPort serialPort;   // 실제 COM 포트 연결 담당
 
     bool initialized = false; // 프린터 초기화 완료 여부
 };
 
+namespace {
+
+// 설정값이 정상적인지 검사
+bool isValidConfig(const PE_PrinterConfig* config)
+{
+    if (!config) {
+        return false;
+    }
+
+    // 프린터 종류는 필수
+    if (!config->printer_type || config->printer_type[0] == '\0') {
+        return false;
+    }
+
+    // 프린터 출력 정보는 필수
+    if (config->dpi <= 0 || config->print_width_dots <= 0) {
+        return false;
+    }
+
+    // port가 있는 경우에만 시리얼 통신 설정 검사
+    if (config->port && config->port[0] != '\0') {
+        if (config->baud_rate <= 0) {
+            return false;
+        }
+
+        if (config->data_bits < 5 || config->data_bits > 8) {
+            return false;
+        }
+
+        if (config->stop_bits != 1 && config->stop_bits != 2) {
+            return false;
+        }
+
+        if (config->parity < 0 || config->parity > 4) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// 개발 빌드에서만 프린터 설정 출력
+void printDebugInfo(const PE_Printer* printer)
+{
+#ifndef NDEBUG
+    std::cout
+        << "Printer initialized\n"
+        << "type: " << printer->printerType << '\n'
+        << "port: " << (printer->port.empty() ? "(none)" : printer->port) << '\n'
+        << "baud: " << printer->baudRate << '\n'
+        << "dpi: " << printer->dpi << '\n'
+        << "width: " << printer->printWidthDots << '\n';
+#endif
+}
+
+} // namespace
+
 PE_Printer* pe_create(void)
 {
-    return new PE_Printer();
+    // C API 밖으로 bad_alloc 예외가 튀어나가지 않게 처리
+    return new (std::nothrow) PE_Printer();
 }
 
 PE_Result pe_initialize(
@@ -32,15 +94,17 @@ PE_Result pe_initialize(
         return PE_ERROR_INVALID_ARGUMENT;
     }
 
-    printer->printerType =
-        config->printer_type
-            ? config->printer_type
-            : "";            
+    if (!isValidConfig(config)) {
+        return PE_ERROR_INVALID_ARGUMENT;
+    }
 
-    printer->port =
-        config->port
-            ? config->port
-            : "";
+    // 이미 초기화되어 있다면 기존 연결부터 종료
+    if (printer->initialized) {
+        pe_shutdown(printer);
+    }
+
+    printer->printerType = config->printer_type ? config->printer_type : "";
+    printer->port = config->port ? config->port : "";
 
     printer->baudRate = config->baud_rate;
     printer->dataBits = config->data_bits;
@@ -48,38 +112,71 @@ PE_Result pe_initialize(
     printer->parity = config->parity;
 
     printer->dpi = config->dpi;
-    printer->printWidthDots =
-        config->print_width_dots;
+    printer->printWidthDots = config->print_width_dots;
 
+    // COM 포트가 지정되어 있으면 실제 시리얼 포트 연결
+    if (!printer->port.empty()) {
+        const bool opened = printer->serialPort.open(
+            printer->port,
+            printer->baudRate,
+            printer->dataBits,
+            printer->stopBits,
+            printer->parity
+        );
+
+        if (!opened) {
+#ifndef NDEBUG
+            std::cerr
+                << "Failed to open serial port: "
+                << printer->port
+                << '\n';
+#endif
+
+            printer->initialized = false;
+
+            return PE_ERROR_CONNECTION;
+        }
+    }
+
+    // port가 없는 경우에는 내장 방식 / 다른 전송 방식으로 사용할 수 있도록
+    // 정상 초기화 상태로 처리
     printer->initialized = true;
 
-    std::cout  // std:cout = console.log (cout = character output. 문자 출력)
-        << "Printer initialized\n"
-        << "type: " << printer->printerType << '\n'
-        << "port: " << printer->port << '\n'
-        << "baud: " << printer->baudRate << '\n'
-        << "dpi: " << printer->dpi << '\n'
-        << "width: " << printer->printWidthDots << '\n';
+    printDebugInfo(printer);
 
     return PE_OK;
 }
 
-void pe_shutdown(
-    PE_Printer* printer
-)
+void pe_shutdown(PE_Printer* printer)
 {
     if (!printer) {
         return;
     }
 
+    if (!printer->initialized) {
+        return;
+    }
+
+    // 시리얼 포트를 사용하는 프린터라면 실제 COM 연결 종료
+    if (!printer->port.empty()) {
+        printer->serialPort.close();
+    }
+
     printer->initialized = false;
 
+#ifndef NDEBUG
     std::cout << "Printer shutdown\n";
+#endif
 }
 
-void pe_destroy(
-    PE_Printer* printer
-)
+void pe_destroy(PE_Printer* printer)
 {
+    if (!printer) {
+        return;
+    }
+
+    // shutdown을 직접 호출하지 않았어도 안전하게 정리
+    pe_shutdown(printer);
+
     delete printer;
 }
