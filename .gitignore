@@ -1,6 +1,8 @@
 # Build output
 **/build/
-build-win32 
+build-win32
+build-win64
+build-macos
 
 # IDE
 .vscode/

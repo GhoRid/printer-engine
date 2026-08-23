@@ -1,10 +1,10 @@
 {
   "cmake.sourceDirectory": "${workspaceFolder}",
-
-  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/include",
+    "${workspaceFolder}/src",
+    "${workspaceFolder}/node",
     "${workspaceFolder}/node_modules/node-addon-api"
-  ]
+  ],
+  "C_Cpp.default.cppStandard": "c++20"
 }
