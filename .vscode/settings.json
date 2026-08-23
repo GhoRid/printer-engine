@@ -1,9 +1,11 @@
 {
-  "cmake.sourceDirectory": "${workspaceFolder}/core",
-  "C_Cpp.default.compileCommands": "${workspaceFolder}/core/build/compile_commands.json",
+  "cmake.sourceDirectory": "${workspaceFolder}",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
   "C_Cpp.default.includePath": [
-    "${workspaceFolder}/core/include",
-    "${workspaceFolder}/core/node_modules/node-addon-api",
+    "${workspaceFolder}/include",
+    "${workspaceFolder}/node_modules/node-addon-api",
     "/Users/pgh5489/.cmake-js/node-arm64/v24.16.0/include/node"
-  ]
+  ],
+  "C_Cpp.default.compilerPath": "/usr/bin/clang++",
+  "C_Cpp.default.intelliSenseMode": "macos-clang-arm64"
 }
