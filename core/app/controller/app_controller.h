@@ -23,6 +23,7 @@ private:
     static constexpr UINT ID_TRAY_OPEN = 1001;
     static constexpr UINT ID_TRAY_EXIT = 1002;
     static constexpr UINT ID_SAVE_SETTINGS = 2001;
+    static constexpr UINT ID_TOGGLE_SERVER = 2002;
 
     HINSTANCE hInstance_ = nullptr;
     HWND window_ = nullptr;
@@ -36,6 +37,7 @@ private:
     HWND dpiCombo_ = nullptr;
     HWND printWidthCombo_ = nullptr;
     HWND serverPortCombo_ = nullptr;
+    HWND serverButton_ = nullptr;
     HWND statusLabel_ = nullptr;
 
     AppSettings settings_;
@@ -53,7 +55,8 @@ private:
     bool initializePrinter();
     bool initializeWindow();
     bool initializeTray();
-    bool initializeLocalServer();
+    void initializeLocalServer();
+    void toggleLocalServer();
 
     void createWindowControls();
     void loadSettingsToControls();

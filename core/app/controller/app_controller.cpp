@@ -2,6 +2,7 @@
 #include "resource.h"
 #include "serial_port.h"
 
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -204,17 +205,7 @@ bool AppController::initialize(HINSTANCE hInstance)
 
     updateStatusLabel();
 
-    if (!initializeLocalServer()) {
-        MessageBoxW(
-            window_,
-            L"로컬 서버를 시작하지 못했습니다.",
-            L"Printer Engine",
-            MB_OK | MB_ICONERROR
-        );
-
-        shutdown();
-        return false;
-    }
+    initializeLocalServer();
 
     initialized_ = true;
 
@@ -666,6 +657,24 @@ void AppController::createWindowControls()
         L"8080"
     );
 
+    serverButton_ = CreateWindowW(
+        L"BUTTON",
+        L"서버 열기",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+        180,
+        435,
+        260,
+        32,
+        window_,
+        reinterpret_cast<HMENU>(
+            static_cast<INT_PTR>(ID_TOGGLE_SERVER)
+        ),
+        hInstance_,
+        nullptr
+    );
+
+    setDefaultFont(serverButton_);
+
     // 저장 버튼
     HWND saveButton = CreateWindowW(
         L"BUTTON",
@@ -675,7 +684,7 @@ void AppController::createWindowControls()
         WS_TABSTOP |
         BS_PUSHBUTTON,
         180,
-        455,
+        480,
         260,
         40,
         window_,
@@ -757,9 +766,7 @@ void AppController::loadSettingsToControls()
     }
     else {
         const std::wstring port =
-            utf8ToWide(
-                settings_.port
-            );
+            utf8ToWide(settings_.port);
 
         // 실제 현재 존재하는 COM 포트인 경우에만 선택
         if (!selectComboValue(
@@ -1087,7 +1094,7 @@ bool AppController::initializeTray()
     return true;
 }
 
-bool AppController::initializeLocalServer()
+void AppController::initializeLocalServer()
 {
     localServer_.setHealthHandler(
         [this]() {
@@ -1111,8 +1118,38 @@ bool AppController::initializeLocalServer()
         }
     );
 
-    return localServer_.start(
-        settings_.serverPort
+}
+
+void AppController::toggleLocalServer()
+{
+    if (localServer_.isRunning()) {
+        localServer_.stop();
+        SetWindowTextW(serverButton_, L"서버 열기");
+        return;
+    }
+
+    try {
+        const int port = std::stoi(
+            getControlText(serverPortCombo_)
+        );
+
+        if (port <= 0 || port > 65535) {
+            throw std::out_of_range("port");
+        }
+
+        if (localServer_.start(port)) {
+            SetWindowTextW(serverButton_, L"서버 정지");
+            return;
+        }
+    }
+    catch (...) {
+    }
+
+    MessageBoxW(
+        window_,
+        L"로컬 서버를 시작하지 못했습니다.\n포트 번호와 사용 여부를 확인해 주세요.",
+        L"Printer Engine",
+        MB_OK | MB_ICONERROR
     );
 }
 
@@ -1268,6 +1305,13 @@ LRESULT AppController::handleWindowMessage(
                 case ID_SAVE_SETTINGS:
                 {
                     saveSettingsFromControls();
+
+                    return 0;
+                }
+
+                case ID_TOGGLE_SERVER:
+                {
+                    toggleLocalServer();
 
                     return 0;
                 }
