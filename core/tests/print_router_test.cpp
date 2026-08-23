@@ -65,4 +65,7 @@ int main()
         "not json",
         nullptr
     ).statusCode == 404);
+
+    assert(pe_print_json(nullptr, "receipt", "{}") == PE_ERROR_INVALID_ARGUMENT);
+    assert(pe_print_commands(nullptr, nullptr, 0) == PE_ERROR_NOT_INITIALIZED);
 }

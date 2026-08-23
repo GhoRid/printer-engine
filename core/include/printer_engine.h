@@ -1,6 +1,8 @@
 #ifndef PRINTER_ENGINE_H
 #define PRINTER_ENGINE_H
 
+#include <stddef.h>
+
 // 사용될 때 C++ 컴파일러인지 확인하고, C++ 컴파일러라면 extern "C"를 사용하여 C 스타일의 링크를 사용하도록 지정
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +31,22 @@ typedef struct {
     int print_width_dots;      // 인쇄 가능한 가로 폭을 dot 단위로 저장
 } PE_PrinterConfig;
 
+typedef enum {
+    PE_COMMAND_TEXT = 0,
+    PE_COMMAND_ALIGN_LEFT,
+    PE_COMMAND_ALIGN_CENTER,
+    PE_COMMAND_ALIGN_RIGHT,
+    PE_COMMAND_FEED,
+    PE_COMMAND_QR,
+    PE_COMMAND_CUT
+} PE_CommandType;
+
+typedef struct {
+    PE_CommandType type;
+    const char* text;
+    int value;
+} PE_PrintCommand;
+
 
 PE_Printer* pe_create(void);
 
@@ -38,6 +56,18 @@ PE_Result pe_initialize(
 );
 
 PE_Result pe_print_test(PE_Printer* printer);
+
+PE_Result pe_print_json(
+    PE_Printer* printer,
+    const char* form,
+    const char* json
+);
+
+PE_Result pe_print_commands(
+    PE_Printer* printer,
+    const PE_PrintCommand* commands,
+    size_t command_count
+);
 
 const char* pe_get_printer_type(const PE_Printer* printer);
 

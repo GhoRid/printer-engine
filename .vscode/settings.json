@@ -1,3 +1,9 @@
 {
-  "cmake.sourceDirectory": "/Users/pgh5489/projects/printer-engine/core"
+  "cmake.sourceDirectory": "${workspaceFolder}/core",
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/core/build/compile_commands.json",
+  "C_Cpp.default.includePath": [
+    "${workspaceFolder}/core/include",
+    "${workspaceFolder}/core/node_modules/node-addon-api",
+    "/Users/pgh5489/.cmake-js/node-arm64/v24.16.0/include/node"
+  ]
 }

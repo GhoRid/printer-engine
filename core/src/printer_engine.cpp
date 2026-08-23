@@ -3,6 +3,7 @@
 #include "printer/printer_backend.h"
 #include "printer/printer_detect.h"
 #include "printer/printer_factory.h"
+#include "print/print_router.h"
 #include "serial_port.h"
 
 #include <iostream>
@@ -195,6 +196,67 @@ PE_Result pe_print_test(PE_Printer* printer)
            backend->cut()
         ? PE_OK
         : PE_ERROR_PRINT;
+}
+
+PE_Result pe_print_json(PE_Printer* printer, const char* form, const char* json)
+{
+    if (!printer || !form || !json) {
+        return PE_ERROR_INVALID_ARGUMENT;
+    }
+
+    const std::string path = std::string("/print/") + form;
+    const PrintRouteResult result = routePrintRequest(path, json, printer);
+
+    if (result.statusCode == 200) return PE_OK;
+    if (result.statusCode == 400 || result.statusCode == 404) {
+        return PE_ERROR_INVALID_ARGUMENT;
+    }
+    return result.statusCode == 503
+        ? PE_ERROR_PRINT
+        : PE_ERROR_NOT_INITIALIZED;
+}
+
+PE_Result pe_print_commands(
+    PE_Printer* printer,
+    const PE_PrintCommand* commands,
+    size_t command_count
+)
+{
+    PrinterBackend* backend = pe_backend(printer);
+    if (!backend) return PE_ERROR_NOT_INITIALIZED;
+    if (!commands || command_count == 0) return PE_ERROR_INVALID_ARGUMENT;
+    if (!backend->initialize()) return PE_ERROR_PRINT;
+
+    for (size_t i = 0; i < command_count; ++i) {
+        const PE_PrintCommand& command = commands[i];
+        bool ok = false;
+
+        switch (command.type) {
+            case PE_COMMAND_TEXT:
+                if (!command.text) return PE_ERROR_INVALID_ARGUMENT;
+                ok = backend->printText(command.text);
+                break;
+            case PE_COMMAND_ALIGN_LEFT: ok = backend->alignLeft(); break;
+            case PE_COMMAND_ALIGN_CENTER: ok = backend->alignCenter(); break;
+            case PE_COMMAND_ALIGN_RIGHT: ok = backend->alignRight(); break;
+            case PE_COMMAND_FEED:
+                if (command.value < 1) return PE_ERROR_INVALID_ARGUMENT;
+                ok = backend->lineFeed(command.value);
+                break;
+            case PE_COMMAND_QR:
+                if (!command.text || command.text[0] == '\0') {
+                    return PE_ERROR_INVALID_ARGUMENT;
+                }
+                ok = backend->printQr(command.text);
+                break;
+            case PE_COMMAND_CUT: ok = backend->cut(); break;
+            default: return PE_ERROR_INVALID_ARGUMENT;
+        }
+
+        if (!ok) return PE_ERROR_PRINT;
+    }
+
+    return PE_OK;
 }
 
 const char* pe_get_printer_type(const PE_Printer* printer)

@@ -9,6 +9,7 @@ project(
 set(CMAKE_CXX_STANDARD 20) # C++20 표준을 사용하도록 설정
 set(CMAKE_CXX_STANDARD_REQUIRED ON) # 반드시 C++20을 지원하는 컴파일러 사용
 set(CMAKE_CXX_EXTENSIONS OFF) # 컴파일러 고유 확장 기능을 끄고 표준 C++20을 사용하겠다
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # MSVC가 소스 파일을 UTF-8로 처리하도록 설정
 if(MSVC)
