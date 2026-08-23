@@ -13,8 +13,8 @@
   },
   "scripts": {
     "build:native": "cmake-js compile",
-    "build:win32": "cmake-js compile --arch ia32 --out build/ia32 && node -e \"const fs=require('fs');fs.mkdirSync('prebuilds/win32-ia32',{recursive:true});fs.copyFileSync('build/ia32/Release/printer_engine_node.node','prebuilds/win32-ia32/printer_engine_node.node')\"",
-    "build:win64": "cmake-js compile --arch x64 --out build/x64 && node -e \"const fs=require('fs');fs.mkdirSync('prebuilds/win32-x64',{recursive:true});fs.copyFileSync('build/x64/Release/printer_engine_node.node','prebuilds/win32-x64/printer_engine_node.node')\"",
+    "build:win32": "cmake-js compile --runtime node --runtime-version 22.22.2 --arch ia32 --out build/ia32 && node -e \"const fs=require('fs');fs.mkdirSync('prebuilds/win32-ia32',{recursive:true});fs.copyFileSync('build/ia32/Release/printer_engine_node.node','prebuilds/win32-ia32/printer_engine_node.node')\"",
+    "build:win64": "cmake-js compile --runtime node --runtime-version 24.14.1 --arch x64 --out build/x64 && node -e \"const fs=require('fs');fs.mkdirSync('prebuilds/win32-x64',{recursive:true});fs.copyFileSync('build/x64/Release/printer_engine_node.node','prebuilds/win32-x64/printer_engine_node.node')\"",
     "build:windows": "npm run build:win32 && npm run build:win64",
     "rebuild:native": "cmake-js rebuild",
     "test": "node node/index.test.js",
