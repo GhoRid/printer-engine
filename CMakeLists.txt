@@ -6,50 +6,80 @@ project(
     LANGUAGES CXX
 )
 
-set(CMAKE_CXX_STANDARD 20) # C++20 표준을 사용하도록 설정
-set(CMAKE_CXX_STANDARD_REQUIRED ON) # 반드시 C++20을 지원하는 컴파일러 사용
-set(CMAKE_CXX_EXTENSIONS OFF) # 컴파일러 고유 확장 기능을 끄고 표준 C++20을 사용하겠다
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Ninja / Makefile 계열에서 compile_commands.json 생성
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# MSVC가 소스 파일을 UTF-8로 처리하도록 설정
+# MSVC에서 한글 소스가 깨지지 않도록 UTF-8 사용
 if(MSVC)
     add_compile_options(/utf-8)
 endif()
 
+# 엔진 내부에서 공통으로 사용하는 헤더 경로
+set(PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/print
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/printer
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/printer/bixolon
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/printer/epson
+)
+
+# printer_engine 핵심 라이브러리
 add_library(
-    printer_engine # printer_engine이라는 라이브러리를 만들어라
-    STATIC # 정적으로
-    src/printer_engine.cpp # 이 소스들을 가지고
+    printer_engine
+    STATIC
+
+    src/printer_engine.cpp
     src/bitmap.cpp
     src/layout_engine.cpp
     src/receipt_engine.cpp
+
     src/printer/printer_backend.cpp
     src/printer/printer_factory.cpp
     src/printer/printer_detect.cpp
+
     src/printer/bixolon/bixolon_backend.cpp
     src/printer/epson/epson_backend.cpp
+
     src/print/print_router.cpp
     src/print/receipt_print.cpp
     src/print/access_pass_print.cpp
 )
 
-# 나중에 Node.js addon 같은 공유 라이브러리에서도 printer_engine을 사용할 수 있게 설정
 set_target_properties(
     printer_engine
     PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
-# 운영체제에 따라서 사용할 시리얼 구현 파일을 선택
+target_include_directories(
+    printer_engine
+
+    PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+
+    PRIVATE
+    ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
+)
+
+# 운영체제별 시리얼 구현
 if(WIN32)
-    # Windows에서는 Windows용 시리얼 구현 사용
     target_sources(
         printer_engine
         PRIVATE
         src/serial/serial_win.cpp
     )
+elseif(APPLE)
+    target_sources(
+        printer_engine
+        PRIVATE
+        src/serial/serial_posix.cpp
+    )
 elseif(UNIX)
-    # macOS / Linux에서는 POSIX용 시리얼 구현 사용
     target_sources(
         printer_engine
         PRIVATE
@@ -59,16 +89,7 @@ else()
     message(FATAL_ERROR "Unsupported operating system")
 endif()
 
-target_include_directories(
-    printer_engine
-    PUBLIC # 자기 자신도, 다른 타겟도 이 경로를 공유
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    PRIVATE # printer_engine 내부에서만 사용하는 헤더 경로
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
-)
-
-# cmake-js로 실행할 때만 Node.js addon을 만든다.
+# cmake-js로 빌드할 때만 Node.js addon 생성
 if(DEFINED CMAKE_JS_VERSION)
     add_library(
         printer_engine_node
@@ -88,6 +109,9 @@ if(DEFINED CMAKE_JS_VERSION)
         printer_engine_node
         PRIVATE
         ${CMAKE_JS_INC}
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/node
         ${CMAKE_CURRENT_SOURCE_DIR}/node_modules/node-addon-api
     )
 
@@ -105,8 +129,12 @@ if(DEFINED CMAKE_JS_VERSION)
     )
 endif()
 
-# Windows 실제 배포용 GUI 실행파일
-if(WIN32)
+# Windows GUI 앱
+# app 폴더가 실제로 존재할 때만 빌드
+if(
+    WIN32
+    AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/app/main.cpp"
+)
     add_executable(
         printer_engine_app
         WIN32
@@ -120,12 +148,13 @@ if(WIN32)
     target_include_directories(
         printer_engine_app
         PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
+        ${CMAKE_CURRENT_SOURCE_DIR}/app
         ${CMAKE_CURRENT_SOURCE_DIR}/app/controller
         ${CMAKE_CURRENT_SOURCE_DIR}/app/settings
         ${CMAKE_CURRENT_SOURCE_DIR}/app/server
         ${CMAKE_CURRENT_SOURCE_DIR}/app/resources
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/print
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
     )
 
     target_compile_definitions(
@@ -145,17 +174,17 @@ if(WIN32)
     )
 endif()
 
-# 테스트용 실행파일을 만드는 부분
+# 기본 테스트
 add_executable(
-    printer_engine_test # 실행파일 이름 printer_engine_test
-    tests/main.cpp # 이 소스를 통해서
+    printer_engine_test
+    tests/main.cpp
 )
 
-# 테스트 코드에서 엔진 내부의 serial_port.h를 찾을 수 있게 경로 추가
 target_include_directories(
     printer_engine_test
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
 )
 
 target_link_libraries(
@@ -164,15 +193,7 @@ target_link_libraries(
     printer_engine
 )
 
-# CMake의 테스트 기능 활성화
-enable_testing()
-
-# ctest 명령으로 printer_engine_test를 실행할 수 있게 등록
-add_test(
-    NAME printer_engine_test
-    COMMAND printer_engine_test
-)
-
+# print router 테스트
 add_executable(
     print_router_test
     tests/print_router_test.cpp
@@ -181,14 +202,21 @@ add_executable(
 target_include_directories(
     print_router_test
     PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/print
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
 )
 
 target_link_libraries(
     print_router_test
     PRIVATE
     printer_engine
+)
+
+enable_testing()
+
+add_test(
+    NAME printer_engine_test
+    COMMAND printer_engine_test
 )
 
 add_test(

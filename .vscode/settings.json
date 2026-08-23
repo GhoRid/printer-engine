@@ -1,10 +1,24 @@
 {
   "cmake.sourceDirectory": "${workspaceFolder}",
+
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/include",
     "${workspaceFolder}/src",
+    "${workspaceFolder}/src/serial",
+    "${workspaceFolder}/src/print",
+    "${workspaceFolder}/src/printer",
+    "${workspaceFolder}/src/printer/bixolon",
+    "${workspaceFolder}/src/printer/epson",
     "${workspaceFolder}/node",
     "${workspaceFolder}/node_modules/node-addon-api"
   ],
-  "C_Cpp.default.cppStandard": "c++20"
+
+  "C_Cpp.default.browse.path": [
+    "${workspaceFolder}/include",
+    "${workspaceFolder}/src",
+    "${workspaceFolder}/node"
+  ],
+
+  "C_Cpp.default.cppStandard": "c++20",
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools"
 }
