@@ -37,6 +37,8 @@ PE_Result pe_initialize(
     const PE_PrinterConfig* config
 );
 
+PE_Result pe_print_test(PE_Printer* printer);
+
 void pe_shutdown(
     PE_Printer* printer
 );

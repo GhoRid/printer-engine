@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <new>
+#include <sstream>
 #include <string>
 
 struct PE_Printer {
@@ -145,6 +146,33 @@ PE_Result pe_initialize(
     printDebugInfo(printer);
 
     return PE_OK;
+}
+
+PE_Result pe_print_test(PE_Printer* printer)
+{
+    if (!printer || !printer->initialized || !printer->serialPort.isOpen()) {
+        return PE_ERROR_NOT_INITIALIZED;
+    }
+
+    std::ostringstream text;
+    text
+        << "\x1b@"
+        << "Printer Engine Test\n"
+        << "------------------------------\n"
+        << "Type       : " << printer->printerType << '\n'
+        << "Port       : " << printer->port << '\n'
+        << "Baud rate  : " << printer->baudRate << '\n'
+        << "Data bits  : " << printer->dataBits << '\n'
+        << "Stop bits  : " << printer->stopBits << '\n'
+        << "Parity     : " << printer->parity << '\n'
+        << "DPI        : " << printer->dpi << '\n'
+        << "Width(dot) : " << printer->printWidthDots << "\n\n\n";
+
+    std::string data = text.str();
+    data.append("\x1d\x56\x00", 3);
+    return printer->serialPort.write(data.data(), data.size())
+        ? PE_OK
+        : PE_ERROR_PRINT;
 }
 
 void pe_shutdown(PE_Printer* printer)

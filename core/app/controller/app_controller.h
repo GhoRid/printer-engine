@@ -24,6 +24,7 @@ private:
     static constexpr UINT ID_TRAY_EXIT = 1002;
     static constexpr UINT ID_SAVE_SETTINGS = 2001;
     static constexpr UINT ID_TOGGLE_SERVER = 2002;
+    static constexpr UINT ID_TEST_PRINT = 2003;
 
     HINSTANCE hInstance_ = nullptr;
     HWND window_ = nullptr;
@@ -39,6 +40,7 @@ private:
     HWND serverPortCombo_ = nullptr;
     HWND serverButton_ = nullptr;
     HWND statusLabel_ = nullptr;
+    HWND logEdit_ = nullptr;
 
     AppSettings settings_;
     PE_Printer* printer_ = nullptr;
@@ -60,7 +62,10 @@ private:
 
     void createWindowControls();
     void loadSettingsToControls();
-    bool saveSettingsFromControls();
+    bool saveSettingsFromControls(bool notify = true);
+    bool applySettings();
+    void testPrint();
+    void appendLog(const wchar_t* message);
     void updateStatusLabel();
 
     void showWindow();

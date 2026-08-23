@@ -204,6 +204,7 @@ bool AppController::initialize(HINSTANCE hInstance)
     printerReady_ = initializePrinter();
 
     updateStatusLabel();
+    appendLog(printerReady_ ? L"프린터 연결 완료." : L"프린터 연결 안 됨.");
 
     initializeLocalServer();
 
@@ -266,6 +267,10 @@ bool AppController::initializePrinter()
         pe_destroy(printer_);
 
         printer_ = nullptr;
+    }
+
+    if (settings_.port.empty()) {
+        return false;
     }
 
     printer_ = pe_create();
@@ -371,8 +376,8 @@ bool AppController::initializeWindow()
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT,
         CW_USEDEFAULT,
-        540,
-        650,
+        900,
+        780,
         nullptr,
         nullptr,
         hInstance_,
@@ -434,7 +439,7 @@ void AppController::createWindowControls()
             style,
             x,
             y,
-            260,
+            330,
             220,
             window_,
             nullptr,
@@ -473,7 +478,7 @@ void AppController::createWindowControls()
 
     printerTypeCombo_ =
         createCombo(
-            180,
+            220,
             75
         );
 
@@ -492,7 +497,7 @@ void AppController::createWindowControls()
 
     portCombo_ =
         createCombo(
-            180,
+            220,
             115
         );
 
@@ -525,7 +530,7 @@ void AppController::createWindowControls()
 
     baudRateCombo_ =
         createCombo(
-            180,
+            220,
             155
         );
 
@@ -545,7 +550,7 @@ void AppController::createWindowControls()
 
     dataBitsCombo_ =
         createCombo(
-            180,
+            220,
             195
         );
 
@@ -564,7 +569,7 @@ void AppController::createWindowControls()
 
     stopBitsCombo_ =
         createCombo(
-            180,
+            220,
             235
         );
 
@@ -581,7 +586,7 @@ void AppController::createWindowControls()
 
     parityCombo_ =
         createCombo(
-            180,
+            220,
             275
         );
 
@@ -601,7 +606,7 @@ void AppController::createWindowControls()
 
     dpiCombo_ =
         createCombo(
-            180,
+            220,
             315
         );
 
@@ -618,7 +623,7 @@ void AppController::createWindowControls()
 
     printWidthCombo_ =
         createCombo(
-            180,
+            220,
             355
         );
 
@@ -637,7 +642,7 @@ void AppController::createWindowControls()
     // 드롭다운 선택 + 직접 입력 가능
     serverPortCombo_ =
         createCombo(
-            180,
+            220,
             395,
             CBS_DROPDOWN
         );
@@ -657,14 +662,47 @@ void AppController::createWindowControls()
         L"8080"
     );
 
+    HWND testButton = CreateWindowW(
+        L"BUTTON",
+        L"테스트 출력",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+        625,
+        75,
+        190,
+        45,
+        window_,
+        reinterpret_cast<HMENU>(static_cast<INT_PTR>(ID_TEST_PRINT)),
+        hInstance_,
+        nullptr
+    );
+    setDefaultFont(testButton);
+
+    createLabel(L"로그", 30, 440, 120);
+    logEdit_ = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"EDIT",
+        nullptr,
+        WS_VISIBLE | WS_CHILD | WS_VSCROLL | ES_MULTILINE |
+            ES_AUTOVSCROLL | ES_READONLY,
+        30,
+        465,
+        520,
+        150,
+        window_,
+        nullptr,
+        hInstance_,
+        nullptr
+    );
+    setDefaultFont(logEdit_);
+
     serverButton_ = CreateWindowW(
         L"BUTTON",
         L"서버 열기",
         WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
-        180,
-        435,
-        260,
-        32,
+        625,
+        650,
+        190,
+        45,
         window_,
         reinterpret_cast<HMENU>(
             static_cast<INT_PTR>(ID_TOGGLE_SERVER)
@@ -683,10 +721,10 @@ void AppController::createWindowControls()
         WS_CHILD |
         WS_TABSTOP |
         BS_PUSHBUTTON,
-        180,
-        480,
-        260,
-        40,
+        625,
+        590,
+        190,
+        45,
         window_,
         reinterpret_cast<HMENU>(
             static_cast<INT_PTR>(
@@ -703,7 +741,7 @@ void AppController::createWindowControls()
     createLabel(
         L"프린터 상태",
         30,
-        525,
+        630,
         120
     );
 
@@ -711,8 +749,8 @@ void AppController::createWindowControls()
         L"STATIC",
         L"",
         WS_VISIBLE | WS_CHILD,
-        180,
-        525,
+        220,
+        630,
         260,
         24,
         window_,
@@ -727,12 +765,12 @@ void AppController::createWindowControls()
 
     HWND infoLabel = CreateWindowW(
         L"STATIC",
-        L"설정 변경 후 앱을 재시작하면 새 설정이 적용됩니다.\n"
+        L"설정 저장 후 서버를 열면 새 설정이 즉시 적용됩니다.\n"
         L"창을 닫아도 시스템 트레이에서 계속 실행됩니다.",
         WS_VISIBLE | WS_CHILD,
         30,
-        570,
-        450,
+        680,
+        520,
         45,
         window_,
         nullptr,
@@ -743,6 +781,8 @@ void AppController::createWindowControls()
     setDefaultFont(infoLabel);
 
     loadSettingsToControls();
+    appendLog(L"Printer Engine 시작 중...");
+    appendLog(settings_.port.empty() ? L"사용 가능한 프린터 포트가 없습니다." : L"설정 파일 로드 완료.");
 }
 
 void AppController::loadSettingsToControls()
@@ -843,7 +883,7 @@ void AppController::loadSettingsToControls()
     );
 }
 
-bool AppController::saveSettingsFromControls()
+bool AppController::saveSettingsFromControls(bool notify)
 {
     const std::wstring printerType =
         getControlText(
@@ -1018,14 +1058,50 @@ bool AppController::saveSettingsFromControls()
         return false;
     }
 
-    MessageBoxW(
-        window_,
-        L"설정이 저장되었습니다.\n앱을 재시작하면 적용됩니다.",
-        L"Printer Engine",
-        MB_OK | MB_ICONINFORMATION
-    );
+    if (notify) {
+        MessageBoxW(window_, L"설정이 저장되었습니다.", L"Printer Engine", MB_OK | MB_ICONINFORMATION);
+    }
+
+    appendLog(L"설정 저장 완료.");
 
     return true;
+}
+
+bool AppController::applySettings()
+{
+    if (!saveSettingsFromControls(false)) {
+        return false;
+    }
+
+    printerReady_ = initializePrinter();
+    updateStatusLabel();
+    appendLog(printerReady_ ? L"프린터 연결 완료." : L"프린터 연결 실패 또는 포트 없음.");
+    return true;
+}
+
+void AppController::testPrint()
+{
+    if (!applySettings() || !printerReady_) {
+        MessageBoxW(window_, L"연결된 프린터가 없습니다.", L"테스트 출력", MB_OK | MB_ICONWARNING);
+        return;
+    }
+
+    const bool printed = pe_print_test(printer_) == PE_OK;
+    appendLog(printed ? L"설정값 테스트 출력 완료." : L"테스트 출력 실패.");
+    MessageBoxW(window_, printed ? L"설정값을 테스트 출력했습니다." : L"테스트 출력에 실패했습니다.",
+        L"테스트 출력", MB_OK | (printed ? MB_ICONINFORMATION : MB_ICONERROR));
+}
+
+void AppController::appendLog(const wchar_t* message)
+{
+    if (!logEdit_) return;
+    SYSTEMTIME now{};
+    GetLocalTime(&now);
+    wchar_t line[512]{};
+    swprintf_s(line, L"[%04d-%02d-%02d %02d:%02d:%02d] %s\r\n",
+        now.wYear, now.wMonth, now.wDay, now.wHour, now.wMinute, now.wSecond, message);
+    SendMessageW(logEdit_, EM_SETSEL, static_cast<WPARAM>(-1), static_cast<LPARAM>(-1));
+    SendMessageW(logEdit_, EM_REPLACESEL, FALSE, reinterpret_cast<LPARAM>(line));
 }
 
 void AppController::updateStatusLabel()
@@ -1125,10 +1201,15 @@ void AppController::toggleLocalServer()
     if (localServer_.isRunning()) {
         localServer_.stop();
         SetWindowTextW(serverButton_, L"서버 열기");
+        appendLog(L"서버 정지.");
         return;
     }
 
     try {
+        if (!applySettings()) {
+            return;
+        }
+
         const int port = std::stoi(
             getControlText(serverPortCombo_)
         );
@@ -1139,6 +1220,7 @@ void AppController::toggleLocalServer()
 
         if (localServer_.start(port)) {
             SetWindowTextW(serverButton_, L"서버 정지");
+            appendLog(L"서버 준비 완료.");
             return;
         }
     }
@@ -1306,6 +1388,12 @@ LRESULT AppController::handleWindowMessage(
                 {
                     saveSettingsFromControls();
 
+                    return 0;
+                }
+
+                case ID_TEST_PRINT:
+                {
+                    testPrint();
                     return 0;
                 }
 
