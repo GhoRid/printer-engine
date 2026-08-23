@@ -31,6 +31,10 @@ printer-engine/
 cmake -S . -B build
 ```
 
+32비트
+cmake -S . -B build-win32 -A Win32
+cmake --build build-win32 --config Release --target printer_engine_app
+
 ### Release 빌드
 
 ```powershell
