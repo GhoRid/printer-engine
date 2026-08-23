@@ -4,7 +4,7 @@
 #include <string>
 
 struct AppSettings {
-    std::string printerType = "BIXOLON";
+    std::string printerType = "AUTO";
     std::string port = "COM1";
 
     int baudRate = 115200;

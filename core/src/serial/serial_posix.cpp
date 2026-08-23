@@ -244,7 +244,7 @@ bool SerialPort::open(
      */
 
     tty.c_cc[VMIN] = 0;
-    tty.c_cc[VTIME] = 10;
+    tty.c_cc[VTIME] = 2;
 
     if (tcsetattr(fd_, TCSANOW, &tty) != 0) {
         close();
@@ -291,6 +291,28 @@ bool SerialPort::write(
     tcdrain(fd_);
 
     return true;
+}
+
+std::size_t SerialPort::read(void* data, std::size_t size)
+{
+    if (!isOpen() || !data || size == 0) {
+        return 0;
+    }
+
+    ssize_t bytesRead;
+
+    do {
+        bytesRead = ::read(fd_, data, size);
+    } while (bytesRead < 0 && errno == EINTR);
+
+    return bytesRead > 0 ? static_cast<std::size_t>(bytesRead) : 0;
+}
+
+void SerialPort::discardInput()
+{
+    if (isOpen()) {
+        tcflush(fd_, TCIFLUSH);
+    }
 }
 
 

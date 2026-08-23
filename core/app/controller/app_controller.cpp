@@ -487,7 +487,17 @@ void AppController::createWindowControls()
 
     addComboItem(
         printerTypeCombo_,
+        L"AUTO"
+    );
+
+    addComboItem(
+        printerTypeCombo_,
         L"BIXOLON"
+    );
+
+    addComboItem(
+        printerTypeCombo_,
+        L"EPSON"
     );
 
     // COM 포트
@@ -1114,12 +1124,18 @@ void AppController::updateStatusLabel()
         return;
     }
 
-    SetWindowTextW(
-        statusLabel_,
-        printerReady_
-            ? L"연결됨"
-            : L"연결 안 됨"
-    );
+    if (!printerReady_) {
+        SetWindowTextW(statusLabel_, L"연결 안 됨");
+        return;
+    }
+
+    const std::lock_guard lock(printerMutex_);
+    const char* detectedType = pe_get_printer_type(printer_);
+    const std::wstring status = L"연결됨 · " +
+        utf8ToWide(detectedType ? detectedType : "") +
+        (settings_.printerType == "AUTO" ? L" 자동 선택" : L"");
+
+    SetWindowTextW(statusLabel_, status.c_str());
 }
 
 bool AppController::initializeTray()

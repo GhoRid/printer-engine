@@ -20,9 +20,13 @@ add_library(
     STATIC # 정적으로
     src/printer_engine.cpp # 이 소스들을 가지고
     src/bitmap.cpp
-    src/bixolon.cpp
     src/layout_engine.cpp
     src/receipt_engine.cpp
+    src/printer/printer_backend.cpp
+    src/printer/printer_factory.cpp
+    src/printer/printer_detect.cpp
+    src/printer/bixolon/bixolon_backend.cpp
+    src/printer/epson/epson_backend.cpp
     src/print/print_router.cpp
     src/print/receipt_print.cpp
     src/print/access_pass_print.cpp
@@ -59,6 +63,7 @@ target_include_directories(
     PUBLIC # 자기 자신도, 다른 타겟도 이 경로를 공유
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     PRIVATE # printer_engine 내부에서만 사용하는 헤더 경로
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/serial
 )
 
@@ -139,6 +144,7 @@ target_include_directories(
     print_router_test
     PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/print
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(

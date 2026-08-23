@@ -39,6 +39,8 @@ PE_Result pe_initialize(
 
 PE_Result pe_print_test(PE_Printer* printer);
 
+const char* pe_get_printer_type(const PE_Printer* printer);
+
 void pe_shutdown(
     PE_Printer* printer
 );

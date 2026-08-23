@@ -25,6 +25,12 @@ public:
     // 프린터로 데이터를 전송한다.
     bool write(const void* data, std::size_t size);
 
+    // 프린터 응답을 timeout까지 읽는다. timeout이면 0을 반환한다.
+    std::size_t read(void* data, std::size_t size);
+
+    // 자동 감지 전에 남아 있는 수신 데이터를 비운다.
+    void discardInput();
+
     // 시리얼 포트를 닫는다.
     void close();
 

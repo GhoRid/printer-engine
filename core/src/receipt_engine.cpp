@@ -1,12 +1,12 @@
 #include "receipt_engine.h"
-#include "bixolon.h"
+#include "printer/printer_backend.h"
 
 #include <algorithm>
 #include <string>
 
 namespace pe {
 
-ReceiptEngine::ReceiptEngine(Bixolon& printer, const layout::LayoutConfig& config)
+ReceiptEngine::ReceiptEngine(PrinterBackend& printer, const layout::LayoutConfig& config)
     : printer(printer), layoutConfig(config)
 {
 }

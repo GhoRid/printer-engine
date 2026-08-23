@@ -1,8 +1,12 @@
 #include "printer_engine.h"
 #include "printer_engine_internal.h"
+#include "printer/printer_backend.h"
+#include "printer/printer_detect.h"
+#include "printer/printer_factory.h"
 #include "serial_port.h"
 
 #include <iostream>
+#include <memory>
 #include <new>
 #include <sstream>
 #include <string>
@@ -20,6 +24,7 @@ struct PE_Printer {
     int printWidthDots = 0;  // 실제 인쇄 가능한 가로 폭(dot)
 
     SerialPort serialPort;   // 실제 COM 포트 연결 담당
+    std::unique_ptr<PrinterBackend> backend;
 
     bool initialized = false; // 프린터 초기화 완료 여부
 };
@@ -33,8 +38,7 @@ bool isValidConfig(const PE_PrinterConfig* config)
         return false;
     }
 
-    // 프린터 종류는 필수
-    if (!config->printer_type || config->printer_type[0] == '\0') {
+    if (!config->printer_type || !parsePrinterType(config->printer_type)) {
         return false;
     }
 
@@ -105,7 +109,6 @@ PE_Result pe_initialize(
         pe_shutdown(printer);
     }
 
-    printer->printerType = config->printer_type ? config->printer_type : "";
     printer->port = config->port ? config->port : "";
 
     printer->baudRate = config->baud_rate;
@@ -140,6 +143,21 @@ PE_Result pe_initialize(
         }
     }
 
+    const PrinterType requestedType = *parsePrinterType(config->printer_type);
+    const PrinterType actualType = requestedType == PrinterType::Auto &&
+            printer->serialPort.isOpen()
+        ? detectPrinterType(printer->serialPort)
+        : (requestedType == PrinterType::Auto ? PrinterType::Bixolon : requestedType);
+
+    printer->backend = createPrinterBackend(actualType, printer->serialPort);
+
+    if (!printer->backend) {
+        printer->serialPort.close();
+        return PE_ERROR_NOT_INITIALIZED;
+    }
+
+    printer->printerType = printer->backend->name();
+
     // port가 없는 경우에는 내장 방식 / 다른 전송 방식으로 사용할 수 있도록
     // 정상 초기화 상태로 처리
     printer->initialized = true;
@@ -151,7 +169,9 @@ PE_Result pe_initialize(
 
 PE_Result pe_print_test(PE_Printer* printer)
 {
-    if (!printer || !printer->initialized || !printer->serialPort.isOpen()) {
+    PrinterBackend* backend = pe_backend(printer);
+
+    if (!backend) {
         return PE_ERROR_NOT_INITIALIZED;
     }
 
@@ -169,11 +189,19 @@ PE_Result pe_print_test(PE_Printer* printer)
         << "DPI        : " << printer->dpi << '\n'
         << "Width(dot) : " << printer->printWidthDots << "\n\n\n";
 
-    std::string data = text.str();
-    data.append("\x1d\x56\x00", 3);
-    return printer->serialPort.write(data.data(), data.size())
+    return backend->initialize() &&
+           backend->printText(text.str()) &&
+           backend->lineFeed(3) &&
+           backend->cut()
         ? PE_OK
         : PE_ERROR_PRINT;
+}
+
+const char* pe_get_printer_type(const PE_Printer* printer)
+{
+    return printer && printer->initialized
+        ? printer->printerType.c_str()
+        : nullptr;
 }
 
 void pe_shutdown(PE_Printer* printer)
@@ -191,6 +219,7 @@ void pe_shutdown(PE_Printer* printer)
         printer->serialPort.close();
     }
 
+    printer->backend.reset();
     printer->initialized = false;
 
 #ifndef NDEBUG
@@ -210,13 +239,14 @@ void pe_destroy(PE_Printer* printer)
     delete printer;
 }
 
-SerialPort* pe_serial_port(PE_Printer* printer)
+PrinterBackend* pe_backend(PE_Printer* printer)
 {
-    if (!printer || !printer->initialized || !printer->serialPort.isOpen()) {
+    if (!printer || !printer->initialized ||
+        !printer->serialPort.isOpen() || !printer->backend) {
         return nullptr;
     }
 
-    return &printer->serialPort;
+    return printer->backend.get();
 }
 
 int pe_print_width_dots(const PE_Printer* printer)

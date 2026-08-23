@@ -238,11 +238,11 @@ bool SerialPort::open(
     COMMTIMEOUTS timeouts{};
 
     // 읽기 간격 timeout
-    timeouts.ReadIntervalTimeout = 50;
+    timeouts.ReadIntervalTimeout = 20;
 
     // 전체 읽기 timeout 계산에 사용
-    timeouts.ReadTotalTimeoutConstant = 50;
-    timeouts.ReadTotalTimeoutMultiplier = 10;
+    timeouts.ReadTotalTimeoutConstant = 200;
+    timeouts.ReadTotalTimeoutMultiplier = 0;
 
     // 전체 쓰기 timeout 계산에 사용
     timeouts.WriteTotalTimeoutConstant = 50;
@@ -322,6 +322,29 @@ bool SerialPort::write(
     FlushFileBuffers(handle);
 
     return true;
+}
+
+std::size_t SerialPort::read(void* data, std::size_t size)
+{
+    if (!isOpen() || !data || size == 0) {
+        return 0;
+    }
+
+    DWORD bytesRead = 0;
+    return ReadFile(
+        static_cast<HANDLE>(handle_),
+        data,
+        static_cast<DWORD>(size),
+        &bytesRead,
+        nullptr
+    ) ? static_cast<std::size_t>(bytesRead) : 0;
+}
+
+void SerialPort::discardInput()
+{
+    if (isOpen()) {
+        PurgeComm(static_cast<HANDLE>(handle_), PURGE_RXABORT | PURGE_RXCLEAR);
+    }
 }
 
 void SerialPort::close()

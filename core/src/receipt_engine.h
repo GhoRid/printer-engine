@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-class Bixolon;
+class PrinterBackend;
 
 namespace pe {
 
@@ -25,12 +25,12 @@ struct ReceiptData {
 class ReceiptEngine
 {
 public:
-    ReceiptEngine(Bixolon& printer, const layout::LayoutConfig& config = {});
+    ReceiptEngine(PrinterBackend& printer, const layout::LayoutConfig& config = {});
 
     bool print(const ReceiptData& receipt);
 
 private:
-    Bixolon& printer;
+    PrinterBackend& printer;
     layout::LayoutConfig layoutConfig;
 
     bool printPositionedLine(const layout::LayoutLine& line);
