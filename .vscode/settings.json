@@ -3,9 +3,6 @@
   "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/include",
-    "${workspaceFolder}/node_modules/node-addon-api",
-    "/Users/pgh5489/.cmake-js/node-arm64/v24.16.0/include/node"
-  ],
-  "C_Cpp.default.compilerPath": "/usr/bin/clang++",
-  "C_Cpp.default.intelliSenseMode": "macos-clang-arm64"
+    "${workspaceFolder}/node_modules/node-addon-api"
+  ]
 }
