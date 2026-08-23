@@ -9,6 +9,7 @@ export interface PrinterConfig {
   printWidthDots?: number
 }
 
+export function isSupported(): boolean
 export function initialize(config: PrinterConfig): true
 export function printTest(): true
 export type PrintForm = 'receipt' | 'access-pass'
