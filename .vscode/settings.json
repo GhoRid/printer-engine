@@ -1,6 +1,8 @@
 {
   "cmake.sourceDirectory": "${workspaceFolder}",
-  "C_Cpp.default.compileCommands": "${workspaceFolder}/build/compile_commands.json",
+
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+
   "C_Cpp.default.includePath": [
     "${workspaceFolder}/include",
     "${workspaceFolder}/node_modules/node-addon-api"
