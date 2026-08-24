@@ -16,6 +16,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # MSVC에서 소스 파일을 UTF-8로 처리
 if(MSVC)
     add_compile_options(/utf-8)
+    set(
+        CMAKE_MSVC_RUNTIME_LIBRARY
+        "MultiThreaded$<$<CONFIG:Debug>:Debug>"
+    )
 endif()
 
 # 엔진 내부 공통 헤더 경로
