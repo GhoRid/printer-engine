@@ -1,6 +1,7 @@
 #include <napi.h>
 
 #include "printer_engine.h"
+#include "serial_port.h"
 
 #include <string>
 #include <unordered_map>
@@ -296,6 +297,14 @@ Napi::Value getPrinterType(const Napi::CallbackInfo& info)
     return type ? Napi::String::New(info.Env(), type) : info.Env().Null();
 }
 
+Napi::Value getComPorts(const Napi::CallbackInfo& info)
+{
+    const std::vector<std::string> ports = SerialPort::listPorts();
+    Napi::Array result = Napi::Array::New(info.Env(), ports.size());
+    for (std::size_t i = 0; i < ports.size(); ++i) result.Set(i, ports[i]);
+    return result;
+}
+
 Napi::Value shutdown(const Napi::CallbackInfo& info)
 {
     pe_destroy(printer);
@@ -312,6 +321,7 @@ Napi::Object init(Napi::Env env, Napi::Object exports)
     exports.Set("setForms", Napi::Function::New(env, setForms));
     exports.Set("print", Napi::Function::New(env, printForm));
     exports.Set("getPrinterType", Napi::Function::New(env, getPrinterType));
+    exports.Set("getComPorts", Napi::Function::New(env, getComPorts));
     exports.Set("shutdown", Napi::Function::New(env, shutdown));
     return exports;
 }

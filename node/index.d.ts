@@ -33,4 +33,5 @@ export type Form = FormStep[]
 export function setForms(forms: Record<string, Form>): true
 export function print(form: string, values: Record<string, string | number>): true
 export function getPrinterType(): string | null
+export function getComPorts(): string[]
 export function shutdown(): void

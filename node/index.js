@@ -14,6 +14,7 @@ const unsupportedModule = {
   setForms: unsupported,
   print: unsupported,
   getPrinterType: unsupported,
+  getComPorts: unsupported,
   shutdown() {},
 };
 
