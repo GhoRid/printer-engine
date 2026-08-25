@@ -1,5 +1,6 @@
 #include <napi.h>
 
+#include "image_loader.h"
 #include "printer_engine.h"
 #include "serial_port.h"
 
@@ -15,6 +16,9 @@ struct FormStep {
     PE_CommandType type;
     std::string text;
     int value = 0;
+    int width = 0;
+    int height = 0;
+    std::vector<std::uint8_t> data;
 };
 
 std::unordered_map<std::string, std::vector<FormStep>> forms;
@@ -56,6 +60,7 @@ bool commandType(const std::string& name, PE_CommandType& type)
     else if (name == "right") type = PE_COMMAND_ALIGN_RIGHT;
     else if (name == "feed") type = PE_COMMAND_FEED;
     else if (name == "qr") type = PE_COMMAND_QR;
+    else if (name == "image") type = PE_COMMAND_IMAGE;
     else if (name == "cut") type = PE_COMMAND_CUT;
     else return false;
     return true;
@@ -110,6 +115,31 @@ Napi::Value setForms(const Napi::CallbackInfo& info)
                         .ThrowAsJavaScriptException();
                     return env.Undefined();
                 }
+            }
+            else if (parsedStep.type == PE_COMMAND_IMAGE) {
+                const std::string path = stringOption(step, "value");
+                const int width = intOption(step, "width", 0);
+                const int threshold = intOption(step, "threshold", 160);
+                if (path.empty() || width < 0 || width > 4096 ||
+                    threshold < 0 || threshold > 255) {
+                    Napi::TypeError::New(
+                        env,
+                        "image requires value; width must be 0..4096 and threshold 0..255"
+                    ).ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
+
+                LoadedImage image;
+                std::string error;
+                if (!loadImageAsMonochrome(
+                        path, width, threshold, image, error
+                    )) {
+                    Napi::TypeError::New(env, error).ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
+                parsedStep.width = image.width;
+                parsedStep.height = image.height;
+                parsedStep.data = std::move(image.data);
             }
             else if (parsedStep.type == PE_COMMAND_FEED) {
                 parsedStep.value = intOption(step, "lines", 1);
@@ -189,7 +219,11 @@ Napi::Value printForm(const Napi::CallbackInfo& info)
         commands.push_back({
             step.type,
             step.text.empty() ? nullptr : rendered[i].c_str(),
-            step.value
+            step.value,
+            step.data.empty() ? nullptr : step.data.data(),
+            step.data.size(),
+            step.width,
+            step.height
         });
     }
 

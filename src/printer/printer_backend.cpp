@@ -52,6 +52,30 @@ bool PrinterBackend::printQr(const std::string& value, int moduleSize)
     });
 }
 
+bool PrinterBackend::printImage(
+    const std::uint8_t* data,
+    std::size_t size,
+    int width,
+    int height
+)
+{
+    if (!data || width < 1 || height < 1) return false;
+
+    const std::size_t bytesPerRow = static_cast<std::size_t>((width + 7) / 8);
+    if (size != bytesPerRow * static_cast<std::size_t>(height) ||
+        bytesPerRow > 0xFFFF || height > 0xFFFF) return false;
+
+    std::vector<std::uint8_t> command{
+        0x1D, 0x76, 0x30, 0x00,
+        static_cast<std::uint8_t>(bytesPerRow & 0xFF),
+        static_cast<std::uint8_t>((bytesPerRow >> 8) & 0xFF),
+        static_cast<std::uint8_t>(height & 0xFF),
+        static_cast<std::uint8_t>((height >> 8) & 0xFF)
+    };
+    command.insert(command.end(), data, data + size);
+    return send(command);
+}
+
 bool PrinterBackend::lineFeed(int lines)
 {
     return lines <= 0 || send(std::vector<std::uint8_t>(

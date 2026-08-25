@@ -74,6 +74,23 @@ printer.print("greeting", {
 });
 ```
 
+이미지는 PNG, JPEG, BMP 등 Windows Imaging Component가 지원하는 파일을 사용할 수 있습니다.
+`setForms()`를 호출할 때 한 번 흑백 비트맵으로 변환하여 캐시하므로, 반복 출력할 때
+이미지 디코딩 비용이 다시 발생하지 않습니다. `width`를 생략하면 원본 너비를 사용하며,
+프린터의 출력 가능 너비(dot)를 넘지 않도록 지정해야 합니다. `threshold`는 0~255이고
+기본값은 160입니다.
+
+```js
+printer.setForms({
+  receipt: [
+    { type: "center" },
+    { type: "image", value: "./assets/logo.png", width: 240 },
+    { type: "text", value: "{{name}}" },
+    { type: "cut" },
+  ],
+});
+```
+
 `initialize()`를 다시 호출하면 기존 포트를 닫고 새 설정으로 연결합니다. 사용이 끝나면 `shutdown()`을 호출하세요.
 
 ## C++ 빌드

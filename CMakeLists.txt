@@ -104,6 +104,7 @@ if(DEFINED CMAKE_JS_VERSION)
         SHARED
 
         node/addon.cpp
+        node/image_loader.cpp
         ${CMAKE_JS_SRC}
     )
 
@@ -137,6 +138,8 @@ if(DEFINED CMAKE_JS_VERSION)
 
         printer_engine
         ${CMAKE_JS_LIB}
+        windowscodecs
+        ole32
     )
 endif()
 

@@ -38,6 +38,7 @@ typedef enum {
     PE_COMMAND_ALIGN_RIGHT,
     PE_COMMAND_FEED,
     PE_COMMAND_QR,
+    PE_COMMAND_IMAGE,
     PE_COMMAND_CUT
 } PE_CommandType;
 
@@ -45,6 +46,10 @@ typedef struct {
     PE_CommandType type;
     const char* text;
     int value;
+    const unsigned char* data;
+    size_t data_size;
+    int width;
+    int height;
 } PE_PrintCommand;
 
 

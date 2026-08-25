@@ -249,6 +249,14 @@ PE_Result pe_print_commands(
                 }
                 ok = backend->printQr(command.text);
                 break;
+            case PE_COMMAND_IMAGE:
+                ok = backend->printImage(
+                    command.data,
+                    command.data_size,
+                    command.width,
+                    command.height
+                );
+                break;
             case PE_COMMAND_CUT: ok = backend->cut(); break;
             default: return PE_ERROR_INVALID_ARGUMENT;
         }
