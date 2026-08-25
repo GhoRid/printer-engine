@@ -3,7 +3,6 @@
 build-win32
 build-win64
 build-macos
-prebuilds
 
 # IDE
 .vscode/
