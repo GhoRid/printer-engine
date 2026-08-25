@@ -1,35 +1,82 @@
 # printer-engine
 
 C++ 기반 프린터 엔진입니다.
+
 Node.js에서는 `@ghorid/printer-engine` 패키지로 사용할 수 있습니다.
 
-## 빌드
+## Node.js에서 사용
 
-### Windows 32비트
+Windows 32비트(`ia32`)와 64비트(`x64`) Node.js를 지원합니다.
 
-```powershell
-cmake -S . -B build-win32 -A Win32
-cmake --build build-win32 --config Release --target printer_engine_app
+```bash
+npm install @ghorid/printer-engine
 ```
 
-실행 파일:
+포트를 조회하고 프린터를 초기화한 뒤 기본 양식을 출력합니다.
 
-```text
-build-win32/Release/printer_engine_app.exe
+```js
+const printer = require("@ghorid/printer-engine");
+
+const ports = printer.getComPorts();
+
+// ['COM3 - Communications Port (COM3)', 'COM7 - USB Serial Device (COM7)']
+
+if (ports.length === 0) {
+  throw new Error("사용 가능한 COM 포트가 없습니다.");
+}
+
+const port = ports[0].split(" - ", 1)[0];
+
+printer.initialize({
+  printerType: "AUTO",
+  port,
+  baudRate: 115200,
+  dataBits: 8,
+  stopBits: 1,
+  parity: 0,
+  dpi: 203,
+  printWidthDots: 576,
+});
+
+try {
+  printer.printTest();
+
+  printer.printJson("receipt", {
+    name: "홍길동",
+    offeringType: "감사헌금",
+    amount: 10000,
+  });
+
+  printer.printJson("access-pass", {
+    name: "홍길동",
+    department: "청년부",
+    qrValue: "ABC123",
+  });
+} finally {
+  printer.shutdown();
+}
 ```
 
-### Windows 64비트
+사용자 양식은 `initialize()` 이후 `shutdown()` 전에 등록하며, `{{이름}}` 형태의 자리표시자를 사용할 수 있습니다.
 
-```powershell
-cmake -S . -B build-win64 -A x64
-cmake --build build-win64 --config Release --target printer_engine_app
+```js
+printer.setForms({
+  greeting: [
+    { type: "center" },
+    { type: "text", value: "{{name}}님 환영합니다." },
+    { type: "feed", lines: 2 },
+    { type: "cut" },
+  ],
+});
+
+printer.print("greeting", {
+  name: "홍길동",
+});
 ```
 
-실행 파일:
+`initialize()`를 다시 호출하면 기존 포트를 닫고 새 설정으로 연결합니다. 사용이 끝나면 `shutdown()`을 호출하세요.
 
-```text
-build-win64/Release/printer_engine_app.exe
-```
+## C++ 빌드
 
 ### macOS
 
@@ -131,16 +178,30 @@ npm publish
 - `printer_engine.lib`는 빌드용 정적 라이브러리이므로 앱 배포 시 필요하지 않습니다.
 - Windows 앱 배포 시 기본적으로 `printer_engine_app.exe`를 사용합니다.
 
-테스트
+## Windows 앱 빌드
 
-윈도우 파우쉘
-$body = @{
-type = "access_pass"
-name = "박건형"
-department = "개발팀"
-qrValue = "https://example.com/pass/123"
-} | ConvertTo-Json
+### Windows 32비트
 
-Invoke-RestMethod `    -Uri "http://127.0.0.1:8080/print"`
--Method Post `    -ContentType "application/json; charset=utf-8"`
--Body $body
+```powershell
+cmake -S . -B build-win32 -A Win32
+cmake --build build-win32 --config Release --target printer_engine_app
+```
+
+실행 파일:
+
+```text
+build-win32/Release/printer_engine_app.exe
+```
+
+### Windows 64비트
+
+```powershell
+cmake -S . -B build-win64 -A x64
+cmake --build build-win64 --config Release --target printer_engine_app
+```
+
+실행 파일:
+
+```text
+build-win64/Release/printer_engine_app.exe
+```
