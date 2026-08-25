@@ -29,9 +29,10 @@ typedef struct {
 
     int dpi;                   // 프린터 해상도 (1인치당 dot 개수)
     int print_width_dots;      // 인쇄 가능한 가로 폭을 dot 단위로 저장
-    int padding_left_dots;     // 콘텐츠 왼쪽 여백. 0 이하면 기본값 24
-    int padding_right_dots;    // 콘텐츠 오른쪽 여백. 0 이하면 기본값 24
+    int padding_left_dots;     // 콘텐츠 왼쪽 여백. 기본값 0
+    int padding_right_dots;    // 콘텐츠 오른쪽 여백. 기본값 0
     int ascii_char_width_dots; // 영문/숫자 한 글자의 기준 폭. 0 이하면 기본값 12
+    int text_width_columns;    // 한 줄 텍스트 칸 수. 0이면 dot 설정에서 자동 계산
 } PE_PrinterConfig;
 
 typedef enum {
@@ -66,6 +67,11 @@ PE_Result pe_initialize(
 );
 
 PE_Result pe_print_test(PE_Printer* printer);
+
+PE_Result pe_print_test_text(
+    PE_Printer* printer,
+    const char* text
+);
 
 PE_Result pe_print_json(
     PE_Printer* printer,

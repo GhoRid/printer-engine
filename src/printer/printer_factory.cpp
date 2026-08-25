@@ -15,16 +15,17 @@ std::optional<PrinterType> parsePrinterType(std::string_view value)
 
 std::unique_ptr<PrinterBackend> createPrinterBackend(
     PrinterType type,
-    SerialPort& serialPort
+    SerialPort& serialPort,
+    int dpi
 )
 {
     if (type == PrinterType::Epson) {
         return std::unique_ptr<PrinterBackend>(
-            new (std::nothrow) EpsonBackend(serialPort)
+            new (std::nothrow) EpsonBackend(serialPort, dpi)
         );
     }
 
     return std::unique_ptr<PrinterBackend>(
-        new (std::nothrow) BixolonBackend(serialPort)
+        new (std::nothrow) BixolonBackend(serialPort, dpi)
     );
 }

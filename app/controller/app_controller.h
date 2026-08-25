@@ -43,6 +43,7 @@ private:
     HWND serverButton_ = nullptr;
     HWND statusLabel_ = nullptr;
     HWND logEdit_ = nullptr;
+    HWND testTextEdit_ = nullptr;
 
     AppSettings settings_;
     PE_Printer* printer_ = nullptr;

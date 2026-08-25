@@ -4,19 +4,72 @@
 
 #include <cstddef>
 
-PrinterBackend::PrinterBackend(SerialPort& serialPort)
-    : serialPort_(serialPort)
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+namespace {
+
+bool utf8ToCp949(const std::string& input, std::string& output)
+{
+#ifdef _WIN32
+    if (input.empty()) {
+        output.clear();
+        return true;
+    }
+
+    const int wideSize = MultiByteToWideChar(
+        CP_UTF8, MB_ERR_INVALID_CHARS, input.data(),
+        static_cast<int>(input.size()), nullptr, 0
+    );
+    if (wideSize <= 0) return false;
+
+    std::wstring wide(static_cast<std::size_t>(wideSize), L'\0');
+    if (MultiByteToWideChar(
+            CP_UTF8, MB_ERR_INVALID_CHARS, input.data(),
+            static_cast<int>(input.size()), wide.data(), wideSize
+        ) != wideSize) return false;
+
+    BOOL usedDefaultCharacter = FALSE;
+    const int encodedSize = WideCharToMultiByte(
+        949, WC_NO_BEST_FIT_CHARS, wide.data(), wideSize,
+        nullptr, 0, nullptr, &usedDefaultCharacter
+    );
+    if (encodedSize <= 0 || usedDefaultCharacter) return false;
+
+    output.assign(static_cast<std::size_t>(encodedSize), '\0');
+    usedDefaultCharacter = FALSE;
+    return WideCharToMultiByte(
+        949, WC_NO_BEST_FIT_CHARS, wide.data(), wideSize,
+        output.data(), encodedSize, nullptr, &usedDefaultCharacter
+    ) == encodedSize && !usedDefaultCharacter;
+#else
+    output = input;
+    return true;
+#endif
+}
+
+} // namespace
+
+PrinterBackend::PrinterBackend(SerialPort& serialPort, int dpi)
+    : serialPort_(serialPort), dpi_(dpi > 0 ? dpi : 203)
 {
 }
 
 bool PrinterBackend::initialize()
 {
-    return send(std::vector<std::uint8_t>{0x1B, 0x40});
+    // Use 200 horizontal/vertical motion units per inch on every supported DPI.
+    return send(std::vector<std::uint8_t>{0x1B, 0x40}) &&
+        send(std::vector<std::uint8_t>{0x1D, 0x50, 200, 200});
 }
 
 bool PrinterBackend::printText(const std::string& text)
 {
-    return send(text);
+    std::string encoded;
+    if (!utf8ToCp949(text, encoded)) return false;
+
+    // Enable the printer's multibyte CJK mode before sending CP949 text.
+    return send(std::vector<std::uint8_t>{0x1C, 0x26}) && send(encoded);
 }
 
 bool PrinterBackend::printQr(const std::string& value, int moduleSize)
@@ -97,6 +150,23 @@ bool PrinterBackend::alignCenter()
 bool PrinterBackend::alignRight()
 {
     return send(std::vector<std::uint8_t>{0x1B, 0x61, 0x02});
+}
+
+bool PrinterBackend::setAbsolutePosition(int dots)
+{
+    if (dots < 0) return false;
+
+    constexpr int motionUnitsPerInch = 200;
+    const long long scaled =
+        (static_cast<long long>(dots) * motionUnitsPerInch + (dpi_ / 2)) / dpi_;
+    if (scaled > 0xFFFF) return false;
+    const int units = static_cast<int>(scaled);
+
+    return send(std::vector<std::uint8_t>{
+        0x1B, 0x24,
+        static_cast<std::uint8_t>(units & 0xFF),
+        static_cast<std::uint8_t>((units >> 8) & 0xFF)
+    });
 }
 
 bool PrinterBackend::cut()

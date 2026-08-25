@@ -21,12 +21,14 @@ export interface PrinterConfig {
   dpi?: number
   /** 출력 가능한 최대 가로 너비(dot). 기본값: 576 */
   printWidthDots?: number
-  /** 콘텐츠 왼쪽 여백(dot). 기본값: 24 */
+  /** 콘텐츠 왼쪽 여백(dot). 기본값: 0 */
   paddingLeftDots?: number
-  /** 콘텐츠 오른쪽 여백(dot). 기본값: 24 */
+  /** 콘텐츠 오른쪽 여백(dot). 기본값: 0 */
   paddingRightDots?: number
   /** 자동 줄바꿈 계산에 쓰는 영문/숫자 한 글자의 폭(dot). 기본값: 12 */
   asciiCharWidthDots?: number
+  /** 한 줄 문자 칸 수를 강제 지정합니다. 좌우 dot 패딩과 함께 지정할 수 없습니다. */
+  textWidthColumns?: number
 }
 
 /** 현재 OS와 CPU 아키텍처에서 네이티브 기능을 사용할 수 있는지 확인합니다. */
@@ -34,7 +36,7 @@ export function isSupported(): boolean
 /** 프린터 연결을 초기화합니다. 실패하면 예외를 던집니다. */
 export function initialize(config: PrinterConfig): true
 /** 연결 정보가 포함된 테스트 영수증을 출력합니다. */
-export function printTest(): true
+export function printTest(text?: string): true
 
 export type PrintForm = 'receipt' | 'access-pass'
 export interface ReceiptData {

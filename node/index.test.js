@@ -9,3 +9,12 @@ if (process.platform !== 'win32') {
   assert.throws(() => printer.getComPorts(), /not supported/)
   assert.doesNotThrow(() => printer.shutdown())
 }
+else if (printer.isSupported()) {
+  assert.throws(
+    () => printer.initialize({
+      textWidthColumns: 48,
+      paddingRightDots: 24,
+    }),
+    /textWidthColumns cannot be used with paddingLeftDots or paddingRightDots/,
+  )
+}

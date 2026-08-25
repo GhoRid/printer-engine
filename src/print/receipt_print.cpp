@@ -4,6 +4,8 @@
 #include "../receipt_engine.h"
 #include "printer/printer_backend.h"
 
+#include <algorithm>
+
 bool printReceipt(PE_Printer* printerHandle, const ReceiptPrintData& data)
 {
     PrinterBackend* printer = pe_backend(printerHandle);
@@ -17,6 +19,10 @@ bool printReceipt(PE_Printer* printerHandle, const ReceiptPrintData& data)
     layout.paddingLeftDots = pe_padding_left_dots(printerHandle);
     layout.paddingRightDots = pe_padding_right_dots(printerHandle);
     layout.asciiCharWidthDots = pe_ascii_char_width_dots(printerHandle);
+    layout.textWidthColumns = std::max(
+        1,
+        layout.contentWidthDots() / layout.asciiCharWidthDots
+    );
 
     pe::ReceiptData receipt;
     receipt.title = "헌금 영수증";

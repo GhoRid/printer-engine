@@ -26,6 +26,11 @@ int main()
     config.printer_type = "AUTO";
     assert(pe_initialize(printer, &config) == PE_OK);
     assert(std::string(pe_get_printer_type(printer)) == "BIXOLON");
+    config.text_width_columns = 48;
+    assert(pe_initialize(printer, &config) == PE_ERROR_INVALID_ARGUMENT);
+    config.padding_left_dots = 0;
+    config.padding_right_dots = 0;
+    assert(pe_initialize(printer, &config) == PE_OK);
     pe_destroy(printer);
 
     assert(detectPrinterTypeFromResponse(

@@ -9,7 +9,7 @@ class SerialPort;
 class PrinterBackend
 {
 public:
-    explicit PrinterBackend(SerialPort& serialPort);
+    explicit PrinterBackend(SerialPort& serialPort, int dpi = 203);
     virtual ~PrinterBackend() = default;
 
     virtual const char* name() const = 0;
@@ -27,10 +27,12 @@ public:
     virtual bool alignLeft();
     virtual bool alignCenter();
     virtual bool alignRight();
+    virtual bool setAbsolutePosition(int dots);
     virtual bool cut();
 
 protected:
     SerialPort& serialPort_;
+    int dpi_;
 
     bool send(const std::vector<std::uint8_t>& data);
     bool send(const std::string& data);

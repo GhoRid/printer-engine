@@ -1,6 +1,7 @@
 #include "layout_engine.h"
 
 #include <algorithm>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -140,7 +141,7 @@ std::string normalizeInlineText(std::string_view text) {
     result.reserve(text.size());
 
     for (char ch : text) {
-        if (ch == '\r' || ch == '\n') {
+        if (ch == '\r' || ch == '\n' || ch == '\t') {
             result.push_back(' ');
         } else {
             result.push_back(ch);
@@ -297,6 +298,34 @@ std::vector<LayoutLine> alignedText(
     TextAlignment alignment,
     const LayoutConfig& config
 ) {
+    if (config.textWidthColumns > 0) {
+        const int columns = config.textWidthColumns;
+        const int asciiWidth = std::max(1, config.asciiCharWidthDots);
+        const auto wrapped = wrapTextByDots(text, columns * asciiWidth, config);
+        std::vector<LayoutLine> lines;
+        lines.reserve(wrapped.size());
+
+        for (const auto& part : wrapped) {
+            const int partColumns = textWidthDots(part, config) / asciiWidth;
+            int leadingSpaces = 0;
+            if (alignment == TextAlignment::Center) {
+                leadingSpaces = std::max(0, (columns - partColumns) / 2);
+            } else if (alignment == TextAlignment::Right) {
+                leadingSpaces = std::max(0, columns - partColumns);
+            }
+
+            LayoutLine line;
+            appendIfNotEmpty(
+                line,
+                0,
+                std::string(static_cast<std::size_t>(leadingSpaces), ' ') + part
+            );
+            lines.push_back(std::move(line));
+        }
+
+        return lines;
+    }
+
     const int contentWidth = std::max(1, config.contentWidthDots());
     const auto wrapped = wrapTextByDots(text, contentWidth, config);
     std::vector<LayoutLine> lines;
@@ -324,6 +353,74 @@ std::vector<LayoutLine> twoColumns(
 ) {
     const std::string leftText = normalizeInlineText(left);
     const std::string rightText = normalizeInlineText(right);
+
+    if (config.textWidthColumns > 0) {
+        const int columns = config.textWidthColumns;
+        const int asciiWidth = std::max(1, config.asciiCharWidthDots);
+        const int leftColumns = textWidthDots(leftText, config) / asciiWidth;
+        const int rightColumns = textWidthDots(rightText, config) / asciiWidth;
+        const int minGapColumns = std::max(
+            1,
+            (std::max(0, config.minColumnGapDots) + asciiWidth - 1) / asciiWidth
+        );
+
+        const auto makeLine = [&](const std::string& leftPart,
+                                  const std::string& rightPart) {
+            const int leftPartColumns = textWidthDots(leftPart, config) / asciiWidth;
+            const int rightPartColumns = textWidthDots(rightPart, config) / asciiWidth;
+            std::string value = leftPart;
+            if (!rightPart.empty()) {
+                value.append(
+                    static_cast<std::size_t>(std::max(
+                        0,
+                        columns - leftPartColumns - rightPartColumns
+                    )),
+                    ' '
+                );
+                value += rightPart;
+            }
+            LayoutLine line;
+            appendIfNotEmpty(line, 0, value);
+            return line;
+        };
+
+        if (leftColumns + minGapColumns + rightColumns <= columns) {
+            return {makeLine(leftText, rightText)};
+        }
+
+        if (leftText.empty() || rightText.empty() || columns < 2) {
+            return leftText.empty()
+                ? alignedText(rightText, TextAlignment::Right, config)
+                : alignedText(leftText, TextAlignment::Left, config);
+        }
+
+        const int actualGap = std::min(minGapColumns, std::max(0, columns - 2));
+        const auto widths = allocateResponsiveWidthsDots(
+            {leftColumns, rightColumns},
+            columns - actualGap,
+            1
+        );
+        const auto leftLines = wrapTextByDots(
+            leftText,
+            widths[0] * asciiWidth,
+            config
+        );
+        const auto rightLines = wrapTextByDots(
+            rightText,
+            widths[1] * asciiWidth,
+            config
+        );
+        const std::size_t lineCount = std::max(leftLines.size(), rightLines.size());
+        std::vector<LayoutLine> lines;
+        lines.reserve(lineCount);
+        for (std::size_t i = 0; i < lineCount; ++i) {
+            lines.push_back(makeLine(
+                i < leftLines.size() ? leftLines[i] : std::string{},
+                i < rightLines.size() ? rightLines[i] : std::string{}
+            ));
+        }
+        return lines;
+    }
 
     const int printWidth = std::max(1, config.contentWidthDots());
     const int minGap = std::max(0, config.minColumnGapDots);
@@ -376,7 +473,18 @@ std::vector<LayoutLine> twoColumns(
     }
 
     // 실제로 한 줄에 안 들어가는 경우
-    const int availableDots = std::max(0, printWidth - minGap);
+    if (printWidth < minimumColumnWidth * 2) {
+        auto lines = alignedText(leftText, TextAlignment::Left, config);
+        auto rightLines = alignedText(rightText, TextAlignment::Right, config);
+        lines.insert(lines.end(), rightLines.begin(), rightLines.end());
+        return lines;
+    }
+
+    const int actualGap = std::min(
+        minGap,
+        std::max(0, printWidth - (minimumColumnWidth * 2))
+    );
+    const int availableDots = std::max(0, printWidth - actualGap);
 
     const auto widths = allocateResponsiveWidthsDots(
         {leftWidth, rightWidth},
@@ -386,7 +494,7 @@ std::vector<LayoutLine> twoColumns(
 
     const int leftColumnWidth = widths[0];
     const int rightColumnWidth = widths[1];
-    const int rightX = leftColumnWidth + minGap;
+    const int rightX = leftColumnWidth + actualGap;
 
     const auto leftLines = wrapTextByDots(
         leftText,
@@ -484,10 +592,34 @@ std::vector<LayoutLine> threeColumns(
     }
 
     // 실제로 한 줄에 안 들어가는 경우
-    const int availableDots = std::max(
-        0,
-        printWidth - (minGap * 2)
+    const int activeColumnCount =
+        (leftText.empty() ? 0 : 1) + 1 + (rightText.empty() ? 0 : 1);
+    if (printWidth < minimumColumnWidth * activeColumnCount) {
+        std::vector<LayoutLine> lines;
+        const auto append = [&lines](std::vector<LayoutLine> source) {
+            lines.insert(
+                lines.end(),
+                std::make_move_iterator(source.begin()),
+                std::make_move_iterator(source.end())
+            );
+        };
+        if (!leftText.empty()) {
+            append(alignedText(leftText, TextAlignment::Left, config));
+        }
+        append(alignedText(middleText, TextAlignment::Center, config));
+        if (!rightText.empty()) {
+            append(alignedText(rightText, TextAlignment::Right, config));
+        }
+        return lines;
+    }
+
+    const int gapCount = std::max(0, activeColumnCount - 1);
+    const int actualGap = gapCount == 0 ? 0 : std::min(
+        minGap,
+        std::max(0, printWidth - (minimumColumnWidth * activeColumnCount)) /
+            gapCount
     );
+    const int availableDots = std::max(0, printWidth - (actualGap * gapCount));
 
     const auto widths = allocateResponsiveWidthsDots(
         {leftWidth, middleWidth, rightWidth},
@@ -500,8 +632,9 @@ std::vector<LayoutLine> threeColumns(
     const int rightColumnWidth = widths[2];
 
     const int leftX = 0;
-    const int middleX = leftColumnWidth + minGap;
-    const int rightX = middleX + middleColumnWidth + minGap;
+    const int middleX = leftColumnWidth + (leftText.empty() ? 0 : actualGap);
+    const int rightX = middleX + middleColumnWidth +
+        (rightText.empty() ? 0 : actualGap);
 
     const auto leftLines = wrapTextByDots(
         leftText,

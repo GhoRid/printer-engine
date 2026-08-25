@@ -76,21 +76,13 @@ bool ReceiptEngine::print(const ReceiptData& receipt)
 
 bool ReceiptEngine::printPositionedLine(const layout::LayoutLine& line)
 {
-    int currentX = 0;
-    std::string output;
-
     for (const auto& positionedText : line) {
         const int targetX = layoutConfig.paddingLeftDots + positionedText.xDots;
-        const int gapDots = std::max(0, targetX - currentX);
-        const int spaces = gapDots / layoutConfig.asciiCharWidthDots;
-
-        output.append(static_cast<std::size_t>(spaces), ' ');
-        output += positionedText.text;
-
-        currentX = targetX + layout::textWidthDots(positionedText.text, layoutConfig);
+        if (!printer.setAbsolutePosition(targetX) ||
+            !printer.printText(positionedText.text)) return false;
     }
 
-    return printer.printText(output);
+    return true;
 }
 
 } // namespace pe

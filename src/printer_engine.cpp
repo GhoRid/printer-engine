@@ -25,9 +25,10 @@ struct PE_Printer {
 
     int dpi = 0;             // 프린터 해상도 (예: 203dpi)
     int printWidthDots = 0;  // 실제 인쇄 가능한 가로 폭(dot)
-    int paddingLeftDots = 24;
-    int paddingRightDots = 24;
+    int paddingLeftDots = 0;
+    int paddingRightDots = 0;
     int asciiCharWidthDots = 12;
+    int textWidthColumns = 0;
 
     SerialPort serialPort;   // 실제 COM 포트 연결 담당
     std::unique_ptr<PrinterBackend> backend;
@@ -51,12 +52,17 @@ bool isValidConfig(const PE_PrinterConfig* config)
     // 프린터 출력 정보는 필수
     if (config->dpi <= 0 || config->print_width_dots <= 0 ||
         config->padding_left_dots < 0 || config->padding_right_dots < 0 ||
-        config->ascii_char_width_dots < 0) {
+        config->ascii_char_width_dots < 0 || config->text_width_columns < 0) {
         return false;
     }
 
     if (config->padding_left_dots + config->padding_right_dots >=
         config->print_width_dots) return false;
+
+    if (config->text_width_columns > 0 &&
+        (config->padding_left_dots > 0 || config->padding_right_dots > 0)) {
+        return false;
+    }
 
     // port가 있는 경우에만 시리얼 통신 설정 검사
     if (config->port && config->port[0] != '\0') {
@@ -133,6 +139,7 @@ PE_Result pe_initialize(
     printer->paddingRightDots = config->padding_right_dots;
     printer->asciiCharWidthDots = config->ascii_char_width_dots > 0
         ? config->ascii_char_width_dots : 12;
+    printer->textWidthColumns = config->text_width_columns;
 
     // COM 포트가 지정되어 있으면 실제 시리얼 포트 연결
     if (!printer->port.empty()) {
@@ -164,7 +171,11 @@ PE_Result pe_initialize(
         ? detectPrinterType(printer->serialPort)
         : (requestedType == PrinterType::Auto ? PrinterType::Bixolon : requestedType);
 
-    printer->backend = createPrinterBackend(actualType, printer->serialPort);
+    printer->backend = createPrinterBackend(
+        actualType,
+        printer->serialPort,
+        printer->dpi
+    );
 
     if (!printer->backend) {
         printer->serialPort.close();
@@ -184,30 +195,82 @@ PE_Result pe_initialize(
 
 PE_Result pe_print_test(PE_Printer* printer)
 {
+    return pe_print_test_text(printer, nullptr);
+}
+
+PE_Result pe_print_test_text(PE_Printer* printer, const char* customText)
+{
     PrinterBackend* backend = pe_backend(printer);
 
     if (!backend) {
         return PE_ERROR_NOT_INITIALIZED;
     }
 
-    std::ostringstream text;
-    text
-        << "\x1b@"
-        << "Printer Engine Test\n"
-        << "------------------------------\n"
-        << "Type       : " << printer->printerType << '\n'
-        << "Port       : " << printer->port << '\n'
-        << "Baud rate  : " << printer->baudRate << '\n'
-        << "Data bits  : " << printer->dataBits << '\n'
-        << "Stop bits  : " << printer->stopBits << '\n'
-        << "Parity     : " << printer->parity << '\n'
-        << "DPI        : " << printer->dpi << '\n'
-        << "Width(dot) : " << printer->printWidthDots << "\n\n\n";
+    pe::layout::LayoutConfig layout;
+    layout.printWidthDots = printer->printWidthDots;
+    layout.paddingLeftDots = printer->paddingLeftDots;
+    layout.paddingRightDots = printer->paddingRightDots;
+    layout.asciiCharWidthDots = printer->asciiCharWidthDots;
+    layout.textWidthColumns = printer->textWidthColumns > 0
+        ? printer->textWidthColumns
+        : std::max(1, layout.contentWidthDots() / layout.asciiCharWidthDots);
 
-    return backend->initialize() &&
-           backend->printText(text.str()) &&
-           backend->lineFeed(3) &&
-           backend->cut()
+    const int contentWidthColumns = layout.textWidthColumns;
+    std::string widthGuide(static_cast<std::size_t>(contentWidthColumns), '-');
+    if (contentWidthColumns == 1) {
+        widthGuide[0] = '|';
+    }
+    else {
+        widthGuide.front() = '|';
+        widthGuide.back() = '|';
+    }
+
+    const auto printLine = [&](const std::string& value) {
+        return backend->setAbsolutePosition(layout.paddingLeftDots) &&
+            backend->printText(value) && backend->lineFeed();
+    };
+    const auto numberLine = [](const char* label, int value) {
+        return std::string(label) + std::to_string(value);
+    };
+
+    if (!backend->initialize() || !backend->alignLeft() ||
+        !printLine("Printer Engine Test") ||
+        !printLine("------------------------------") ||
+        !printLine("Type       : " + printer->printerType) ||
+        !printLine("Port       : " + printer->port) ||
+        !printLine(numberLine("Baud rate  : ", printer->baudRate)) ||
+        !printLine(numberLine("Data bits  : ", printer->dataBits)) ||
+        !printLine(numberLine("Stop bits  : ", printer->stopBits)) ||
+        !printLine(numberLine("Parity     : ", printer->parity)) ||
+        !printLine(numberLine("DPI        : ", printer->dpi)) ||
+        !printLine(numberLine("Width(dot) : ", printer->printWidthDots)) ||
+        !printLine(numberLine("Padding(L) : ", printer->paddingLeftDots)) ||
+        !printLine(numberLine("Padding(R) : ", printer->paddingRightDots)) ||
+        !printLine(numberLine("Content col: ", contentWidthColumns)) ||
+        !printLine(widthGuide)) {
+        return PE_ERROR_PRINT;
+    }
+
+    if (customText && customText[0] != '\0') {
+        if (!printLine("------------------------------")) return PE_ERROR_PRINT;
+        const auto lines = pe::layout::alignedText(
+            customText,
+            pe::layout::TextAlignment::Left,
+            layout
+        );
+        for (const auto& line : lines) {
+            for (const auto& part : line) {
+                if (!backend->setAbsolutePosition(
+                        layout.paddingLeftDots + part.xDots
+                    ) || !backend->printText(part.text)) {
+                    return PE_ERROR_PRINT;
+                }
+            }
+            if (!backend->lineFeed()) return PE_ERROR_PRINT;
+        }
+    }
+
+    return backend->lineFeed(2) && backend->cut()
         ? PE_OK
         : PE_ERROR_PRINT;
 }
@@ -246,6 +309,9 @@ PE_Result pe_print_commands(
     layout.paddingLeftDots = printer->paddingLeftDots;
     layout.paddingRightDots = printer->paddingRightDots;
     layout.asciiCharWidthDots = printer->asciiCharWidthDots;
+    layout.textWidthColumns = printer->textWidthColumns > 0
+        ? printer->textWidthColumns
+        : std::max(1, layout.contentWidthDots() / layout.asciiCharWidthDots);
     pe::layout::TextAlignment textAlignment = pe::layout::TextAlignment::Left;
 
     const auto applyNativeAlignment = [&]() {
@@ -260,19 +326,11 @@ PE_Result pe_print_commands(
     const auto printLayoutLines = [&](const std::vector<pe::layout::LayoutLine>& lines) {
         if (!backend->alignLeft()) return false;
         for (std::size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
-            int currentX = 0;
-            std::string output;
             for (const auto& part : lines[lineIndex]) {
                 const int targetX = layout.paddingLeftDots + part.xDots;
-                const int gapDots = std::max(0, targetX - currentX);
-                output.append(
-                    static_cast<std::size_t>(gapDots / layout.asciiCharWidthDots),
-                    ' '
-                );
-                output += part.text;
-                currentX = targetX + pe::layout::textWidthDots(part.text, layout);
+                if (!backend->setAbsolutePosition(targetX) ||
+                    !backend->printText(part.text)) return false;
             }
-            if (!backend->printText(output)) return false;
             if (lineIndex + 1 < lines.size() && !backend->lineFeed()) return false;
         }
         return true;
@@ -289,7 +347,7 @@ PE_Result pe_print_commands(
                     command.text,
                     textAlignment,
                     layout
-                ));
+                )) && backend->lineFeed();
                 break;
             case PE_COMMAND_ALIGN_LEFT:
                 textAlignment = pe::layout::TextAlignment::Left;
@@ -330,7 +388,7 @@ PE_Result pe_print_commands(
                     command.text,
                     command.secondary_text,
                     layout
-                ));
+                )) && backend->lineFeed();
                 break;
             default: return PE_ERROR_INVALID_ARGUMENT;
         }

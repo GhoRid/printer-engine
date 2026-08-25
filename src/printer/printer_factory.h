@@ -17,5 +17,6 @@ std::optional<PrinterType> parsePrinterType(std::string_view value);
 
 std::unique_ptr<PrinterBackend> createPrinterBackend(
     PrinterType type,
-    SerialPort& serialPort
+    SerialPort& serialPort,
+    int dpi = 203
 );

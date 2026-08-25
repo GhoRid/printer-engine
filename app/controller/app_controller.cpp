@@ -345,8 +345,8 @@ bool AppController::initializePrinter()
 
     config.print_width_dots =
         settings_.printWidthDots;
-    config.padding_left_dots = 24;
-    config.padding_right_dots = 24;
+    config.padding_left_dots = 0;
+    config.padding_right_dots = 0;
     config.ascii_char_width_dots = 12;
 
     const PE_Result result = pe_initialize(
@@ -718,12 +718,29 @@ void AppController::createWindowControls()
         L"8080"
     );
 
+    createLabel(L"\ud14c\uc2a4\ud2b8 \ubb38\uc790\uc5f4", 625, 75, 190);
+    testTextEdit_ = CreateWindowExW(
+        WS_EX_CLIENTEDGE,
+        L"EDIT",
+        L"\ud55c\uae00 \u6f22\u5b57 English 123 !@#",
+        WS_VISIBLE | WS_CHILD | WS_TABSTOP | ES_AUTOHSCROLL,
+        625,
+        105,
+        190,
+        28,
+        window_,
+        nullptr,
+        hInstance_,
+        nullptr
+    );
+    setDefaultFont(testTextEdit_);
+
     HWND testButton = CreateWindowW(
         L"BUTTON",
         L"테스트 출력",
         WS_VISIBLE | WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
         625,
-        75,
+        145,
         190,
         45,
         window_,
@@ -1147,8 +1164,10 @@ void AppController::testPrint()
         return;
     }
 
+    const std::wstring testText = getControlText(testTextEdit_);
+    const std::string utf8TestText = wideToUtf8(testText);
     const std::lock_guard lock(printerMutex_);
-    const bool printed = pe_print_test(printer_) == PE_OK;
+    const bool printed = pe_print_test_text(printer_, utf8TestText.c_str()) == PE_OK;
     appendLog(printed ? L"설정값 테스트 출력 완료." : L"테스트 출력 실패.");
     MessageBoxW(window_, printed ? L"설정값을 테스트 출력했습니다." : L"테스트 출력에 실패했습니다.",
         L"테스트 출력", MB_OK | (printed ? MB_ICONINFORMATION : MB_ICONERROR));

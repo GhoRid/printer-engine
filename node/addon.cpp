@@ -301,6 +301,19 @@ Napi::Value initialize(const Napi::CallbackInfo& info)
     }
 
     const Napi::Object input = info[0].As<Napi::Object>();
+    const int paddingLeftDots = intOption(input, "paddingLeftDots", 0);
+    const int paddingRightDots = intOption(input, "paddingRightDots", 0);
+    const int textWidthColumns = intOption(input, "textWidthColumns", 0);
+
+    if (textWidthColumns > 0 &&
+        (paddingLeftDots > 0 || paddingRightDots > 0)) {
+        Napi::TypeError::New(
+            env,
+            "textWidthColumns cannot be used with paddingLeftDots or paddingRightDots"
+        ).ThrowAsJavaScriptException();
+        return env.Undefined();
+    }
+
     const std::string type = stringOption(input, "printerType", "AUTO");
     const std::string port = stringOption(input, "port");
     const PE_PrinterConfig config{
@@ -312,9 +325,10 @@ Napi::Value initialize(const Napi::CallbackInfo& info)
         intOption(input, "parity", 0),
         intOption(input, "dpi", 203),
         intOption(input, "printWidthDots", 576),
-        intOption(input, "paddingLeftDots", 24),
-        intOption(input, "paddingRightDots", 24),
+        paddingLeftDots,
+        paddingRightDots,
         intOption(input, "asciiCharWidthDots", 12),
+        textWidthColumns,
     };
 
     if (!printer) {
@@ -338,7 +352,19 @@ Napi::Value initialize(const Napi::CallbackInfo& info)
 
 Napi::Value printTest(const Napi::CallbackInfo& info)
 {
-    const PE_Result result = pe_print_test(printer);
+    std::string text;
+    if (info.Length() > 0 && !info[0].IsUndefined()) {
+        if (!info[0].IsString()) {
+            Napi::TypeError::New(info.Env(), "text must be a string")
+                .ThrowAsJavaScriptException();
+            return info.Env().Undefined();
+        }
+        text = info[0].As<Napi::String>().Utf8Value();
+    }
+
+    const PE_Result result = text.empty()
+        ? pe_print_test(printer)
+        : pe_print_test_text(printer, text.c_str());
     if (result != PE_OK) {
         throwResult(info.Env(), result);
         return info.Env().Undefined();

@@ -36,9 +36,10 @@ printer.initialize({
   parity: 0,
   dpi: 203,
   printWidthDots: 576,
-  paddingLeftDots: 24,
-  paddingRightDots: 24,
+  paddingLeftDots: 0,
+  paddingRightDots: 0,
   asciiCharWidthDots: 12,
+  textWidthColumns: 48,
 });
 
 try {
@@ -95,6 +96,11 @@ printer.setForms({
 ```
 
 `text` 단계는 `printWidthDots`에서 좌우 패딩을 뺀 영역을 기준으로 자동 줄바꿈됩니다.
+텍스트 한 줄 칸 수는 `printWidthDots`, 좌우 패딩, `asciiCharWidthDots`에서 자동 계산됩니다.
+자동값이 실제 프린터 폰트와 다를 때만 `textWidthColumns`를 `42` 또는 `48`처럼 지정해 덮어쓸 수 있습니다.
+`textWidthColumns`와 `paddingLeftDots`/`paddingRightDots`를 동시에 지정하면 설정 오류가 발생합니다.
+`text`와 `columns`의 줄바꿈/정렬은 문자 칸 수를 사용하며,
+한글/CJK 문자는 2칸으로 계산합니다. 이미지의 `width`는 계속 dot 단위입니다.
 앞선 `left`, `center`, `right` 단계에 따라 각 줄도 같은 콘텐츠 영역 안에서 정렬됩니다.
 왼쪽/오른쪽 값을 한 행에 배치하려면 `columns`를 사용합니다. 오른쪽 값이 길면
 오른쪽 열의 폭에 맞춰 줄바꿈되며, 나뉜 모든 줄은 오른쪽 끝에 정렬됩니다.
