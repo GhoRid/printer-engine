@@ -345,6 +345,9 @@ bool AppController::initializePrinter()
 
     config.print_width_dots =
         settings_.printWidthDots;
+    config.padding_left_dots = 24;
+    config.padding_right_dots = 24;
+    config.ascii_char_width_dots = 12;
 
     const PE_Result result = pe_initialize(
         printer_,

@@ -5,7 +5,9 @@
 #include "printer/printer_factory.h"
 #include "print/print_router.h"
 #include "serial_port.h"
+#include "layout_engine.h"
 
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <new>
@@ -23,6 +25,9 @@ struct PE_Printer {
 
     int dpi = 0;             // 프린터 해상도 (예: 203dpi)
     int printWidthDots = 0;  // 실제 인쇄 가능한 가로 폭(dot)
+    int paddingLeftDots = 24;
+    int paddingRightDots = 24;
+    int asciiCharWidthDots = 12;
 
     SerialPort serialPort;   // 실제 COM 포트 연결 담당
     std::unique_ptr<PrinterBackend> backend;
@@ -44,9 +49,14 @@ bool isValidConfig(const PE_PrinterConfig* config)
     }
 
     // 프린터 출력 정보는 필수
-    if (config->dpi <= 0 || config->print_width_dots <= 0) {
+    if (config->dpi <= 0 || config->print_width_dots <= 0 ||
+        config->padding_left_dots < 0 || config->padding_right_dots < 0 ||
+        config->ascii_char_width_dots < 0) {
         return false;
     }
+
+    if (config->padding_left_dots + config->padding_right_dots >=
+        config->print_width_dots) return false;
 
     // port가 있는 경우에만 시리얼 통신 설정 검사
     if (config->port && config->port[0] != '\0') {
@@ -119,6 +129,10 @@ PE_Result pe_initialize(
 
     printer->dpi = config->dpi;
     printer->printWidthDots = config->print_width_dots;
+    printer->paddingLeftDots = config->padding_left_dots;
+    printer->paddingRightDots = config->padding_right_dots;
+    printer->asciiCharWidthDots = config->ascii_char_width_dots > 0
+        ? config->ascii_char_width_dots : 12;
 
     // COM 포트가 지정되어 있으면 실제 시리얼 포트 연결
     if (!printer->port.empty()) {
@@ -227,6 +241,43 @@ PE_Result pe_print_commands(
     if (!commands || command_count == 0) return PE_ERROR_INVALID_ARGUMENT;
     if (!backend->initialize()) return PE_ERROR_PRINT;
 
+    pe::layout::LayoutConfig layout;
+    layout.printWidthDots = printer->printWidthDots;
+    layout.paddingLeftDots = printer->paddingLeftDots;
+    layout.paddingRightDots = printer->paddingRightDots;
+    layout.asciiCharWidthDots = printer->asciiCharWidthDots;
+    pe::layout::TextAlignment textAlignment = pe::layout::TextAlignment::Left;
+
+    const auto applyNativeAlignment = [&]() {
+        switch (textAlignment) {
+            case pe::layout::TextAlignment::Left: return backend->alignLeft();
+            case pe::layout::TextAlignment::Center: return backend->alignCenter();
+            case pe::layout::TextAlignment::Right: return backend->alignRight();
+        }
+        return false;
+    };
+
+    const auto printLayoutLines = [&](const std::vector<pe::layout::LayoutLine>& lines) {
+        if (!backend->alignLeft()) return false;
+        for (std::size_t lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+            int currentX = 0;
+            std::string output;
+            for (const auto& part : lines[lineIndex]) {
+                const int targetX = layout.paddingLeftDots + part.xDots;
+                const int gapDots = std::max(0, targetX - currentX);
+                output.append(
+                    static_cast<std::size_t>(gapDots / layout.asciiCharWidthDots),
+                    ' '
+                );
+                output += part.text;
+                currentX = targetX + pe::layout::textWidthDots(part.text, layout);
+            }
+            if (!backend->printText(output)) return false;
+            if (lineIndex + 1 < lines.size() && !backend->lineFeed()) return false;
+        }
+        return true;
+    };
+
     for (size_t i = 0; i < command_count; ++i) {
         const PE_PrintCommand& command = commands[i];
         bool ok = false;
@@ -234,11 +285,24 @@ PE_Result pe_print_commands(
         switch (command.type) {
             case PE_COMMAND_TEXT:
                 if (!command.text) return PE_ERROR_INVALID_ARGUMENT;
-                ok = backend->printText(command.text);
+                ok = printLayoutLines(pe::layout::alignedText(
+                    command.text,
+                    textAlignment,
+                    layout
+                ));
                 break;
-            case PE_COMMAND_ALIGN_LEFT: ok = backend->alignLeft(); break;
-            case PE_COMMAND_ALIGN_CENTER: ok = backend->alignCenter(); break;
-            case PE_COMMAND_ALIGN_RIGHT: ok = backend->alignRight(); break;
+            case PE_COMMAND_ALIGN_LEFT:
+                textAlignment = pe::layout::TextAlignment::Left;
+                ok = applyNativeAlignment();
+                break;
+            case PE_COMMAND_ALIGN_CENTER:
+                textAlignment = pe::layout::TextAlignment::Center;
+                ok = applyNativeAlignment();
+                break;
+            case PE_COMMAND_ALIGN_RIGHT:
+                textAlignment = pe::layout::TextAlignment::Right;
+                ok = applyNativeAlignment();
+                break;
             case PE_COMMAND_FEED:
                 if (command.value < 1) return PE_ERROR_INVALID_ARGUMENT;
                 ok = backend->lineFeed(command.value);
@@ -247,10 +311,10 @@ PE_Result pe_print_commands(
                 if (!command.text || command.text[0] == '\0') {
                     return PE_ERROR_INVALID_ARGUMENT;
                 }
-                ok = backend->printQr(command.text);
+                ok = applyNativeAlignment() && backend->printQr(command.text);
                 break;
             case PE_COMMAND_IMAGE:
-                ok = backend->printImage(
+                ok = applyNativeAlignment() && backend->printImage(
                     command.data,
                     command.data_size,
                     command.width,
@@ -258,6 +322,16 @@ PE_Result pe_print_commands(
                 );
                 break;
             case PE_COMMAND_CUT: ok = backend->cut(); break;
+            case PE_COMMAND_COLUMNS:
+                if (!command.text || !command.secondary_text) {
+                    return PE_ERROR_INVALID_ARGUMENT;
+                }
+                ok = printLayoutLines(pe::layout::twoColumns(
+                    command.text,
+                    command.secondary_text,
+                    layout
+                ));
+                break;
             default: return PE_ERROR_INVALID_ARGUMENT;
         }
 
@@ -322,4 +396,19 @@ PrinterBackend* pe_backend(PE_Printer* printer)
 int pe_print_width_dots(const PE_Printer* printer)
 {
     return printer ? printer->printWidthDots : 0;
+}
+
+int pe_padding_left_dots(const PE_Printer* printer)
+{
+    return printer ? printer->paddingLeftDots : 0;
+}
+
+int pe_padding_right_dots(const PE_Printer* printer)
+{
+    return printer ? printer->paddingRightDots : 0;
+}
+
+int pe_ascii_char_width_dots(const PE_Printer* printer)
+{
+    return printer ? printer->asciiCharWidthDots : 0;
 }

@@ -15,6 +15,7 @@ PE_Printer* printer = nullptr;
 struct FormStep {
     PE_CommandType type;
     std::string text;
+    std::string secondaryText;
     int value = 0;
     int width = 0;
     int height = 0;
@@ -62,6 +63,7 @@ bool commandType(const std::string& name, PE_CommandType& type)
     else if (name == "qr") type = PE_COMMAND_QR;
     else if (name == "image") type = PE_COMMAND_IMAGE;
     else if (name == "cut") type = PE_COMMAND_CUT;
+    else if (name == "columns") type = PE_COMMAND_COLUMNS;
     else return false;
     return true;
 }
@@ -112,6 +114,15 @@ Napi::Value setForms(const Napi::CallbackInfo& info)
                 parsedStep.text = stringOption(step, "value");
                 if (parsedStep.text.empty()) {
                     Napi::TypeError::New(env, "text and qr steps require value")
+                        .ThrowAsJavaScriptException();
+                    return env.Undefined();
+                }
+            }
+            else if (parsedStep.type == PE_COMMAND_COLUMNS) {
+                parsedStep.text = stringOption(step, "left");
+                parsedStep.secondaryText = stringOption(step, "right");
+                if (parsedStep.text.empty() || parsedStep.secondaryText.empty()) {
+                    Napi::TypeError::New(env, "columns steps require left and right")
                         .ThrowAsJavaScriptException();
                     return env.Undefined();
                 }
@@ -207,11 +218,18 @@ Napi::Value printForm(const Napi::CallbackInfo& info)
     }
 
     std::vector<std::string> rendered(form->second.size());
+    std::vector<std::string> renderedSecondary(form->second.size());
     std::vector<PE_PrintCommand> commands;
     commands.reserve(form->second.size());
     for (std::size_t i = 0; i < form->second.size(); ++i) {
         const FormStep& step = form->second[i];
         if (!step.text.empty() && !render(step.text, values, rendered[i])) {
+            Napi::TypeError::New(env, "missing or invalid form value")
+                .ThrowAsJavaScriptException();
+            return env.Undefined();
+        }
+        if (!step.secondaryText.empty() &&
+            !render(step.secondaryText, values, renderedSecondary[i])) {
             Napi::TypeError::New(env, "missing or invalid form value")
                 .ThrowAsJavaScriptException();
             return env.Undefined();
@@ -223,7 +241,8 @@ Napi::Value printForm(const Napi::CallbackInfo& info)
             step.data.empty() ? nullptr : step.data.data(),
             step.data.size(),
             step.width,
-            step.height
+            step.height,
+            step.secondaryText.empty() ? nullptr : renderedSecondary[i].c_str()
         });
     }
 
@@ -293,6 +312,9 @@ Napi::Value initialize(const Napi::CallbackInfo& info)
         intOption(input, "parity", 0),
         intOption(input, "dpi", 203),
         intOption(input, "printWidthDots", 576),
+        intOption(input, "paddingLeftDots", 24),
+        intOption(input, "paddingRightDots", 24),
+        intOption(input, "asciiCharWidthDots", 12),
     };
 
     if (!printer) {

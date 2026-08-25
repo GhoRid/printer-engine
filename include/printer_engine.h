@@ -29,6 +29,9 @@ typedef struct {
 
     int dpi;                   // 프린터 해상도 (1인치당 dot 개수)
     int print_width_dots;      // 인쇄 가능한 가로 폭을 dot 단위로 저장
+    int padding_left_dots;     // 콘텐츠 왼쪽 여백. 0 이하면 기본값 24
+    int padding_right_dots;    // 콘텐츠 오른쪽 여백. 0 이하면 기본값 24
+    int ascii_char_width_dots; // 영문/숫자 한 글자의 기준 폭. 0 이하면 기본값 12
 } PE_PrinterConfig;
 
 typedef enum {
@@ -39,7 +42,8 @@ typedef enum {
     PE_COMMAND_FEED,
     PE_COMMAND_QR,
     PE_COMMAND_IMAGE,
-    PE_COMMAND_CUT
+    PE_COMMAND_CUT,
+    PE_COMMAND_COLUMNS
 } PE_CommandType;
 
 typedef struct {
@@ -50,6 +54,7 @@ typedef struct {
     size_t data_size;
     int width;
     int height;
+    const char* secondary_text; // PE_COMMAND_COLUMNS의 오른쪽 내용
 } PE_PrintCommand;
 
 

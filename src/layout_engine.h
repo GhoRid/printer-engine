@@ -29,6 +29,12 @@ struct PositionedText {
 // 한 줄에 여러 텍스트가 들어갈 수 있음
 using LayoutLine = std::vector<PositionedText>;
 
+enum class TextAlignment {
+    Left,
+    Center,
+    Right
+};
+
 
 // 문자열의 실제 출력 폭 계산
 int textWidthDots(
@@ -41,6 +47,13 @@ int textWidthDots(
 std::vector<std::string> wrapTextByDots(
     std::string_view text,
     int maxWidthDots,
+    const LayoutConfig& config
+);
+
+// 패딩을 제외한 콘텐츠 영역 안에서 줄바꿈하고 각 줄의 정렬 위치를 계산
+std::vector<LayoutLine> alignedText(
+    std::string_view text,
+    TextAlignment alignment,
     const LayoutConfig& config
 );
 

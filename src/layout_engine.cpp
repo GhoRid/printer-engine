@@ -292,6 +292,31 @@ std::vector<std::string> wrapTextByDots(
     return lines;
 }
 
+std::vector<LayoutLine> alignedText(
+    std::string_view text,
+    TextAlignment alignment,
+    const LayoutConfig& config
+) {
+    const int contentWidth = std::max(1, config.contentWidthDots());
+    const auto wrapped = wrapTextByDots(text, contentWidth, config);
+    std::vector<LayoutLine> lines;
+    lines.reserve(wrapped.size());
+
+    for (const auto& part : wrapped) {
+        const int width = textWidthDots(part, config);
+        int x = 0;
+        if (alignment == TextAlignment::Center) {
+            x = std::max(0, (contentWidth - width) / 2);
+        } else if (alignment == TextAlignment::Right) {
+            x = std::max(0, contentWidth - width);
+        }
+        LayoutLine line;
+        appendIfNotEmpty(line, x, part);
+        lines.push_back(std::move(line));
+    }
+    return lines;
+}
+
 std::vector<LayoutLine> twoColumns(
     std::string_view left,
     std::string_view right,
@@ -300,7 +325,7 @@ std::vector<LayoutLine> twoColumns(
     const std::string leftText = normalizeInlineText(left);
     const std::string rightText = normalizeInlineText(right);
 
-    const int printWidth = std::max(1, config.printWidthDots);
+    const int printWidth = std::max(1, config.contentWidthDots());
     const int minGap = std::max(0, config.minColumnGapDots);
     const int minimumColumnWidth = std::max(1, config.asciiCharWidthDots);
 
@@ -340,8 +365,10 @@ std::vector<LayoutLine> twoColumns(
 
         for (const auto& part : wrapped) {
             LayoutLine line;
-
-            appendIfNotEmpty(line, 0, part);
+            const int x = leftText.empty()
+                ? std::max(0, printWidth - textWidthDots(part, config))
+                : 0;
+            appendIfNotEmpty(line, x, part);
             lines.push_back(std::move(line));
         }
 
@@ -389,7 +416,12 @@ std::vector<LayoutLine> twoColumns(
         }
 
         if (i < rightLines.size()) {
-            appendIfNotEmpty(line, rightX, rightLines[i]);
+            const int lineWidth = textWidthDots(rightLines[i], config);
+            appendIfNotEmpty(
+                line,
+                rightX + std::max(0, rightColumnWidth - lineWidth),
+                rightLines[i]
+            );
         }
 
         lines.push_back(std::move(line));
@@ -413,7 +445,7 @@ std::vector<LayoutLine> threeColumns(
         return twoColumns(leftText, rightText, config);
     }
 
-    const int printWidth = std::max(1, config.printWidthDots);
+    const int printWidth = std::max(1, config.contentWidthDots());
     const int minGap = std::max(0, config.minColumnGapDots);
     const int minimumColumnWidth = std::max(1, config.asciiCharWidthDots);
 
@@ -505,11 +537,21 @@ std::vector<LayoutLine> threeColumns(
         }
 
         if (i < middleLines.size()) {
-            appendIfNotEmpty(line, middleX, middleLines[i]);
+            const int lineWidth = textWidthDots(middleLines[i], config);
+            appendIfNotEmpty(
+                line,
+                middleX + std::max(0, (middleColumnWidth - lineWidth) / 2),
+                middleLines[i]
+            );
         }
 
         if (i < rightLines.size()) {
-            appendIfNotEmpty(line, rightX, rightLines[i]);
+            const int lineWidth = textWidthDots(rightLines[i], config);
+            appendIfNotEmpty(
+                line,
+                rightX + std::max(0, rightColumnWidth - lineWidth),
+                rightLines[i]
+            );
         }
 
         lines.push_back(std::move(line));

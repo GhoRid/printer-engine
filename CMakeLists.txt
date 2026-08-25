@@ -246,3 +246,25 @@ add_test(
     NAME print_router_test
     COMMAND print_router_test
 )
+
+add_executable(
+    layout_engine_test
+    tests/layout_engine_test.cpp
+)
+
+target_include_directories(
+    layout_engine_test
+    PRIVATE
+    ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS}
+)
+
+target_link_libraries(
+    layout_engine_test
+    PRIVATE
+    printer_engine
+)
+
+add_test(
+    NAME layout_engine_test
+    COMMAND layout_engine_test
+)

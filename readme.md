@@ -36,6 +36,9 @@ printer.initialize({
   parity: 0,
   dpi: 203,
   printWidthDots: 576,
+  paddingLeftDots: 24,
+  paddingRightDots: 24,
+  asciiCharWidthDots: 12,
 });
 
 try {
@@ -86,6 +89,21 @@ printer.setForms({
     { type: "center" },
     { type: "image", value: "./assets/logo.png", width: 240 },
     { type: "text", value: "{{name}}" },
+    { type: "cut" },
+  ],
+});
+```
+
+`text` 단계는 `printWidthDots`에서 좌우 패딩을 뺀 영역을 기준으로 자동 줄바꿈됩니다.
+앞선 `left`, `center`, `right` 단계에 따라 각 줄도 같은 콘텐츠 영역 안에서 정렬됩니다.
+왼쪽/오른쪽 값을 한 행에 배치하려면 `columns`를 사용합니다. 오른쪽 값이 길면
+오른쪽 열의 폭에 맞춰 줄바꿈되며, 나뉜 모든 줄은 오른쪽 끝에 정렬됩니다.
+
+```js
+printer.setForms({
+  receipt: [
+    { type: "columns", left: "{{itemName}}", right: "{{amount}}" },
+    { type: "feed" },
     { type: "cut" },
   ],
 });

@@ -13,6 +13,9 @@ int main()
     config.printer_type = "AUTO";
     config.dpi = 203;
     config.print_width_dots = 576;
+    config.padding_left_dots = 24;
+    config.padding_right_dots = 24;
+    config.ascii_char_width_dots = 12;
 
     assert(printer);
     config.printer_type = "GENERIC_ESC_POS";

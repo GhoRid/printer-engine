@@ -13,24 +13,29 @@ ReceiptEngine::ReceiptEngine(PrinterBackend& printer, const layout::LayoutConfig
 
 bool ReceiptEngine::print(const ReceiptData& receipt)
 {
-    if (!printer.alignCenter()) return false;
-
-    if (!receipt.title.empty()) {
-        if (!printer.printText(receipt.title)) return false;
-        if (!printer.lineFeed()) return false;
-    }
-
     if (!printer.alignLeft()) return false;
 
+    if (!receipt.title.empty()) {
+        const auto lines = layout::alignedText(
+            receipt.title,
+            layout::TextAlignment::Center,
+            layoutConfig
+        );
+        for (const auto& line : lines) {
+            if (!printPositionedLine(line)) return false;
+            if (!printer.lineFeed()) return false;
+        }
+    }
+
     for (const std::string& header : receipt.headers) {
-        const auto lines = layout::wrapTextByDots(
+        const auto lines = layout::alignedText(
             header,
-            layoutConfig.contentWidthDots(),
+            layout::TextAlignment::Left,
             layoutConfig
         );
 
-        for (const std::string& line : lines) {
-            if (!printer.printText(line)) return false;
+        for (const auto& line : lines) {
+            if (!printPositionedLine(line)) return false;
             if (!printer.lineFeed()) return false;
         }
     }
@@ -52,11 +57,16 @@ bool ReceiptEngine::print(const ReceiptData& receipt)
         if (!printer.lineFeed()) return false;
     }
 
-    if (!printer.alignCenter()) return false;
-
     for (const std::string& footer : receipt.footers) {
-        if (!printer.printText(footer)) return false;
-        if (!printer.lineFeed()) return false;
+        const auto lines = layout::alignedText(
+            footer,
+            layout::TextAlignment::Center,
+            layoutConfig
+        );
+        for (const auto& line : lines) {
+            if (!printPositionedLine(line)) return false;
+            if (!printer.lineFeed()) return false;
+        }
     }
 
     if (!printer.lineFeed(3)) return false;

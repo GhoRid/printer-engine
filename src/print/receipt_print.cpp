@@ -14,6 +14,9 @@ bool printReceipt(PE_Printer* printerHandle, const ReceiptPrintData& data)
 
     pe::layout::LayoutConfig layout;
     layout.printWidthDots = pe_print_width_dots(printerHandle);
+    layout.paddingLeftDots = pe_padding_left_dots(printerHandle);
+    layout.paddingRightDots = pe_padding_right_dots(printerHandle);
+    layout.asciiCharWidthDots = pe_ascii_char_width_dots(printerHandle);
 
     pe::ReceiptData receipt;
     receipt.title = "헌금 영수증";

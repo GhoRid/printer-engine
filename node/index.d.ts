@@ -21,6 +21,12 @@ export interface PrinterConfig {
   dpi?: number
   /** 출력 가능한 최대 가로 너비(dot). 기본값: 576 */
   printWidthDots?: number
+  /** 콘텐츠 왼쪽 여백(dot). 기본값: 24 */
+  paddingLeftDots?: number
+  /** 콘텐츠 오른쪽 여백(dot). 기본값: 24 */
+  paddingRightDots?: number
+  /** 자동 줄바꿈 계산에 쓰는 영문/숫자 한 글자의 폭(dot). 기본값: 12 */
+  asciiCharWidthDots?: number
 }
 
 /** 현재 OS와 CPU 아키텍처에서 네이티브 기능을 사용할 수 있는지 확인합니다. */
@@ -73,6 +79,13 @@ export interface ImageFormStep {
 export interface AlignFormStep {
   type: 'left' | 'center' | 'right'
 }
+export interface ColumnsFormStep {
+  type: 'columns'
+  /** 왼쪽 정렬할 내용. `{{key}}` 플레이스홀더를 사용할 수 있습니다. */
+  left: string
+  /** 오른쪽 정렬할 내용. 길면 오른쪽 열 안에서 줄바꿈됩니다. */
+  right: string
+}
 export interface FeedFormStep {
   type: 'feed'
   /** 용지를 넘길 줄 수. 기본값: 1 */
@@ -88,6 +101,7 @@ export type FormStep =
   | QrFormStep
   | ImageFormStep
   | AlignFormStep
+  | ColumnsFormStep
   | FeedFormStep
   | CutFormStep
 export type Form = FormStep[]
