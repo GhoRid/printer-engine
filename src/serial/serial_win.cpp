@@ -3,7 +3,57 @@
 #ifdef _WIN32
 
 #include <windows.h> // Windows API 사용 (COM 포트, HANDLE, WriteFile 등)
+#include <devguid.h>
+#include <setupapi.h>
 #include <algorithm> // 정렬 기능 제공 (std::sort)
+
+namespace {
+
+std::string wideToUtf8(const wchar_t* value)
+{
+    const int size = WideCharToMultiByte(
+        CP_UTF8, 0, value, -1, nullptr, 0, nullptr, nullptr
+    );
+    std::string result(size > 0 ? size : 0, '\0');
+    if (size > 1) {
+        WideCharToMultiByte(
+            CP_UTF8, 0, value, -1, result.data(), size, nullptr, nullptr
+        );
+        result.pop_back();
+    }
+    return result;
+}
+
+std::string getPortDescription(const std::string& port)
+{
+    HDEVINFO devices = SetupDiGetClassDevsW(
+        &GUID_DEVCLASS_PORTS, nullptr, nullptr, DIGCF_PRESENT
+    );
+    if (devices == INVALID_HANDLE_VALUE) return port;
+
+    const std::string suffix = "(" + port + ")";
+    std::string description = port;
+    SP_DEVINFO_DATA device{sizeof(device)};
+    wchar_t name[256];
+
+    for (DWORD index = 0; SetupDiEnumDeviceInfo(devices, index, &device); ++index) {
+        if (SetupDiGetDeviceRegistryPropertyW(
+                devices, &device, SPDRP_FRIENDLYNAME, nullptr,
+                reinterpret_cast<PBYTE>(name), sizeof(name), nullptr
+            )) {
+            const std::string friendlyName = wideToUtf8(name);
+            if (friendlyName.find(suffix) != std::string::npos) {
+                description = friendlyName;
+                break;
+            }
+        }
+    }
+
+    SetupDiDestroyDeviceInfoList(devices);
+    return description;
+}
+
+} // namespace
 
 SerialPort::SerialPort()
     // Windows에서는 file descriptor 대신 HANDLE 사용
@@ -19,9 +69,9 @@ SerialPort::~SerialPort()
 
 
 // Windows COM 포트 조회 로직
-std::vector<std::string> SerialPort::listPorts()
+std::vector<SerialPortInfo> SerialPort::listPorts()
 {
-    std::vector<std::string> ports;
+    std::vector<SerialPortInfo> ports;
 
     /*
      * Windows에서는 등록된 시리얼 포트 정보가
@@ -89,7 +139,7 @@ std::vector<std::string> SerialPort::listPorts()
             const std::string portName =
                 reinterpret_cast<const char*>(data);
 
-            ports.push_back(portName);
+            ports.push_back({portName, getPortDescription(portName)});
         }
 
         index++;
@@ -100,15 +150,19 @@ std::vector<std::string> SerialPort::listPorts()
 
     // COM 포트 이름 순서대로 정렬
     std::sort(
-        ports.begin(),
-        ports.end()
+        ports.begin(), ports.end(),
+        [](const SerialPortInfo& left, const SerialPortInfo& right) {
+            return left.port < right.port;
+        }
     );
 
     // 혹시 같은 포트가 중복되어 있다면 제거
     ports.erase(
         std::unique(
-            ports.begin(),
-            ports.end()
+            ports.begin(), ports.end(),
+            [](const SerialPortInfo& left, const SerialPortInfo& right) {
+                return left.port == right.port;
+            }
         ),
         ports.end()
     );

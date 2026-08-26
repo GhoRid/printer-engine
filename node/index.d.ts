@@ -111,6 +111,11 @@ export type Forms = Record<string, Form>
 export type FormValue = string | number
 export type FormValues = Record<string, FormValue>
 
+export interface SerialPortInfo {
+  port: string
+  description: string
+}
+
 /** 사용자 양식을 등록합니다. 이미지는 이때 변환되어 메모리에 캐시됩니다. */
 export function setForms(forms: Forms): true
 /** 등록한 양식에 플레이스홀더 값을 적용하여 출력합니다. */
@@ -118,6 +123,6 @@ export function print(form: string, values: FormValues): true
 /** 초기화된 실제 프린터 종류입니다. 초기화 전에는 null입니다. */
 export function getPrinterType(): ActivePrinterType | null
 /** 사용할 수 있는 COM 포트의 이름과 설명 목록입니다. */
-export function getComPorts(): string[]
+export function getComPorts(): SerialPortInfo[]
 /** 프린터 연결을 닫습니다. 여러 번 호출해도 안전합니다. */
 export function shutdown(): void

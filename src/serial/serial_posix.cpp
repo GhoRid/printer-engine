@@ -41,9 +41,9 @@ static speed_t getBaudRate(int baudRate)
 }
 
 // macOS / Linux용 포트 조회 로직
-std::vector<std::string> SerialPort::listPorts()
+std::vector<SerialPortInfo> SerialPort::listPorts()
 {
-    std::vector<std::string> ports;
+    std::vector<SerialPortInfo> ports;
 
     // macOS / Linux에서는 장치들이 /dev 폴더 아래에 파일처럼 등록된다.
     DIR* directory = opendir("/dev");
@@ -93,9 +93,8 @@ std::vector<std::string> SerialPort::listPorts()
         }
 
         // 실제 전체 경로를 목록에 추가
-        ports.push_back(
-            "/dev/" + name
-        );
+        const std::string port = "/dev/" + name;
+        ports.push_back({port, port});
 
 #else
         /*
@@ -116,9 +115,8 @@ std::vector<std::string> SerialPort::listPorts()
             name.rfind("ttyACM", 0) == 0 ||
             name.rfind("ttyS", 0) == 0
         ) {
-            ports.push_back(
-                "/dev/" + name
-            );
+            const std::string port = "/dev/" + name;
+            ports.push_back({port, port});
         }
 
 #endif
@@ -129,8 +127,10 @@ std::vector<std::string> SerialPort::listPorts()
 
     // 포트 목록을 이름 순서대로 정렬
     std::sort(
-        ports.begin(),
-        ports.end()
+        ports.begin(), ports.end(),
+        [](const SerialPortInfo& left, const SerialPortInfo& right) {
+            return left.port < right.port;
+        }
     );
 
     return ports;

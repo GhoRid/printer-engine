@@ -25,7 +25,7 @@ if (ports.length === 0) {
   throw new Error("사용 가능한 COM 포트가 없습니다.");
 }
 
-const port = ports[0].split(" - ", 1)[0];
+const port = ports[0].port;
 
 printer.initialize({
   printerType: "AUTO",

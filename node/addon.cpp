@@ -381,9 +381,14 @@ Napi::Value getPrinterType(const Napi::CallbackInfo& info)
 
 Napi::Value getComPorts(const Napi::CallbackInfo& info)
 {
-    const std::vector<std::string> ports = SerialPort::listPorts();
+    const std::vector<SerialPortInfo> ports = SerialPort::listPorts();
     Napi::Array result = Napi::Array::New(info.Env(), ports.size());
-    for (std::size_t i = 0; i < ports.size(); ++i) result.Set(i, ports[i]);
+    for (std::size_t i = 0; i < ports.size(); ++i) {
+        Napi::Object item = Napi::Object::New(info.Env());
+        item.Set("port", ports[i].port);
+        item.Set("description", ports[i].description);
+        result.Set(i, item);
+    }
     return result;
 }
 

@@ -5,13 +5,18 @@
 #include <string>
 #include <vector>   //여러 개의 포트 이름을 목록 형태로 저장하기 위해 사용
 
+struct SerialPortInfo {
+    std::string port;
+    std::string description;
+};
+
 class SerialPort {
 public:
     SerialPort();
     ~SerialPort();
 
     // 현재 OS에서 사용 가능한 시리얼 포트 목록을 조회한다.
-    static std::vector<std::string> listPorts();
+    static std::vector<SerialPortInfo> listPorts();
 
     // 시리얼 포트를 연다.
     bool open(

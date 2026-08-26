@@ -3,8 +3,6 @@
 #include "resource.h"
 #include "serial_port.h"
 
-#include <devguid.h>
-#include <setupapi.h>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -13,36 +11,6 @@ namespace {
 
 constexpr wchar_t WINDOW_CLASS_NAME[] = L"PrinterEngineWindowClass";
 constexpr wchar_t WINDOW_TITLE[] = L"Printer Engine";
-
-std::wstring getPortLabel(const std::wstring& port)
-{
-    HDEVINFO devices = SetupDiGetClassDevsW(
-        &GUID_DEVCLASS_PORTS, nullptr, nullptr, DIGCF_PRESENT
-    );
-
-    if (devices == INVALID_HANDLE_VALUE) {
-        return port;
-    }
-
-    const std::wstring suffix = L"(" + port + L")";
-    std::wstring label = port;
-    SP_DEVINFO_DATA device{sizeof(device)};
-    wchar_t name[256];
-
-    for (DWORD index = 0; SetupDiEnumDeviceInfo(devices, index, &device); ++index) {
-        if (SetupDiGetDeviceRegistryPropertyW(
-                devices, &device, SPDRP_FRIENDLYNAME, nullptr,
-                reinterpret_cast<PBYTE>(name), sizeof(name), nullptr
-            ) && std::wstring(name).find(suffix) != std::wstring::npos) {
-            label += L" - ";
-            label += name;
-            break;
-        }
-    }
-
-    SetupDiDestroyDeviceInfoList(devices);
-    return label;
-}
 
 std::wstring portFromLabel(const std::wstring& label)
 {
@@ -561,14 +529,13 @@ void AppController::createWindowControls()
     );
 
     // Windows에서 현재 실제 등록된 COM 포트 조회
-    const std::vector<std::string> ports =
+    const std::vector<SerialPortInfo> ports =
         SerialPort::listPorts();
 
-    for (const std::string& port : ports) {
-        const std::wstring widePort =
-            utf8ToWide(port);
-
-        const std::wstring label = getPortLabel(widePort);
+    for (const SerialPortInfo& port : ports) {
+        const std::wstring label = utf8ToWide(
+            port.port + " - " + port.description
+        );
 
         addComboItem(
             portCombo_,

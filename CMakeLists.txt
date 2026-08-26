@@ -81,6 +81,7 @@ if(WIN32)
         PRIVATE
         src/serial/serial_win.cpp
     )
+    target_link_libraries(printer_engine PUBLIC setupapi)
 elseif(APPLE)
     target_sources(
         printer_engine

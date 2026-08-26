@@ -7,7 +7,7 @@
 int main()
 {
     // 현재 Mac에 잡힌 시리얼 포트 목록 가져오기
-    std::vector<std::string> ports = SerialPort::listPorts();
+    std::vector<SerialPortInfo> ports = SerialPort::listPorts();
 
     if (ports.empty()) {
         std::cerr << "No serial ports found\n";
@@ -17,11 +17,12 @@ int main()
     std::cout << "Available serial ports:\n";
 
     for (std::size_t i = 0; i < ports.size(); ++i) {
-        std::cout << "[" << i << "] " << ports[i] << '\n';
+        std::cout << "[" << i << "] " << ports[i].port
+                  << " - " << ports[i].description << '\n';
     }
 
     // 일단 첫 번째 포트 사용
-    const std::string& port = ports[0];
+    const std::string& port = ports[0].port;
 
     std::cout << "\nOpening port: " << port << '\n';
 
