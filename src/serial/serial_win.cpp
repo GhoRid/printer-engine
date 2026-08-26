@@ -5,6 +5,8 @@
 #include <windows.h> // Windows API 사용 (COM 포트, HANDLE, WriteFile 등)
 #include <devguid.h>
 #include <setupapi.h>
+#include <cctype>
+#include <vector>
 #include <algorithm> // 정렬 기능 제공 (std::sort)
 
 namespace {
@@ -24,6 +26,67 @@ std::string wideToUtf8(const wchar_t* value)
     return result;
 }
 
+std::string normalizePortName(std::string value)
+{
+    std::transform(
+        value.begin(), value.end(), value.begin(),
+        [](unsigned char character) {
+            return static_cast<char>(std::toupper(character));
+        }
+    );
+    return value;
+}
+
+std::string getDevicePortName(HDEVINFO devices, SP_DEVINFO_DATA& device)
+{
+    HKEY key = SetupDiOpenDevRegKey(
+        devices, &device, DICS_FLAG_GLOBAL, 0, DIREG_DEV, KEY_QUERY_VALUE
+    );
+    if (key == INVALID_HANDLE_VALUE) return {};
+
+    DWORD type = 0;
+    DWORD size = 0;
+    LONG result = RegQueryValueExW(
+        key, L"PortName", nullptr, &type, nullptr, &size
+    );
+
+    std::string portName;
+    if (result == ERROR_SUCCESS && type == REG_SZ && size >= sizeof(wchar_t)) {
+        std::vector<wchar_t> value(size / sizeof(wchar_t) + 1, L'\0');
+        result = RegQueryValueExW(
+            key, L"PortName", nullptr, &type,
+            reinterpret_cast<BYTE*>(value.data()), &size
+        );
+        if (result == ERROR_SUCCESS) portName = wideToUtf8(value.data());
+    }
+
+    RegCloseKey(key);
+    return portName;
+}
+
+std::string getFriendlyName(HDEVINFO devices, SP_DEVINFO_DATA& device)
+{
+    DWORD type = 0;
+    DWORD size = 0;
+    SetupDiGetDeviceRegistryPropertyW(
+        devices, &device, SPDRP_FRIENDLYNAME, &type, nullptr, 0, &size
+    );
+    if (GetLastError() != ERROR_INSUFFICIENT_BUFFER ||
+        type != REG_SZ || size < sizeof(wchar_t)) {
+        return {};
+    }
+
+    std::vector<BYTE> value(size);
+    if (!SetupDiGetDeviceRegistryPropertyW(
+            devices, &device, SPDRP_FRIENDLYNAME, &type,
+            value.data(), size, nullptr
+        )) {
+        return {};
+    }
+
+    return wideToUtf8(reinterpret_cast<const wchar_t*>(value.data()));
+}
+
 std::string getPortDescription(const std::string& port)
 {
     HDEVINFO devices = SetupDiGetClassDevsW(
@@ -31,22 +94,16 @@ std::string getPortDescription(const std::string& port)
     );
     if (devices == INVALID_HANDLE_VALUE) return port;
 
-    const std::string suffix = "(" + port + ")";
     std::string description = port;
     SP_DEVINFO_DATA device{sizeof(device)};
-    wchar_t name[256];
 
     for (DWORD index = 0; SetupDiEnumDeviceInfo(devices, index, &device); ++index) {
-        if (SetupDiGetDeviceRegistryPropertyW(
-                devices, &device, SPDRP_FRIENDLYNAME, nullptr,
-                reinterpret_cast<PBYTE>(name), sizeof(name), nullptr
-            )) {
-            const std::string friendlyName = wideToUtf8(name);
-            if (friendlyName.find(suffix) != std::string::npos) {
-                description = friendlyName;
-                break;
-            }
-        }
+        const std::string devicePort = getDevicePortName(devices, device);
+        if (normalizePortName(devicePort) != normalizePortName(port)) continue;
+
+        const std::string friendlyName = getFriendlyName(devices, device);
+        if (!friendlyName.empty()) description = friendlyName;
+        break;
     }
 
     SetupDiDestroyDeviceInfoList(devices);
