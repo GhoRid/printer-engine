@@ -1,6 +1,12 @@
-/** 프린터 드라이버 선택값. AUTO는 연결된 프린터를 자동 감지합니다. */
-export type PrinterType = 'AUTO' | 'BIXOLON' | 'EPSON'
-export type ActivePrinterType = Exclude<PrinterType, 'AUTO'>
+/** 프린터 프로파일. AUTO는 기존 제조사 감지 후 알려진 BK 모델을 추가 식별합니다. */
+export type PrinterType =
+  | 'AUTO'
+  | 'EPSON'
+  | 'BIXOLON_SRP'
+  | 'BIXOLON_BK'
+  | 'BIXOLON' // 이전 설정과 호환
+  | 'BK3-31' // 이전 설정과 호환
+export type ActivePrinterType = Exclude<PrinterType, 'AUTO' | 'BK3-31'>
 /** none, odd, even, mark, space 순서입니다. */
 export type SerialParity = 0 | 1 | 2 | 3 | 4
 

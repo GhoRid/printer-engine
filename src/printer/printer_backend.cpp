@@ -51,16 +51,19 @@ bool utf8ToCp949(const std::string& input, std::string& output)
 
 } // namespace
 
-PrinterBackend::PrinterBackend(SerialPort& serialPort, int dpi)
-    : serialPort_(serialPort), dpi_(dpi > 0 ? dpi : 203)
+PrinterBackend::PrinterBackend(SerialPort& serialPort, int dpi,
+                               bool skipMotionUnitsCommand)
+    : serialPort_(serialPort), dpi_(dpi > 0 ? dpi : 203),
+      skipMotionUnitsCommand_(skipMotionUnitsCommand)
 {
 }
 
 bool PrinterBackend::initialize()
 {
-    // Use 200 horizontal/vertical motion units per inch on every supported DPI.
+    // BIXOLON BK uses GS P for barcode alignment, not motion units.
     return send(std::vector<std::uint8_t>{0x1B, 0x40}) &&
-        send(std::vector<std::uint8_t>{0x1D, 0x50, 200, 200});
+        (skipMotionUnitsCommand_ ||
+         send(std::vector<std::uint8_t>{0x1D, 0x50, 200, 200}));
 }
 
 bool PrinterBackend::printText(const std::string& text)
@@ -156,7 +159,7 @@ bool PrinterBackend::setAbsolutePosition(int dots)
 {
     if (dots < 0) return false;
 
-    constexpr int motionUnitsPerInch = 200;
+    const int motionUnitsPerInch = skipMotionUnitsCommand_ ? 203 : 200;
     const long long scaled =
         (static_cast<long long>(dots) * motionUnitsPerInch + (dpi_ / 2)) / dpi_;
     if (scaled > 0xFFFF) return false;

@@ -506,6 +506,16 @@ void AppController::createWindowControls()
 
     addComboItem(
         printerTypeCombo_,
+        L"BIXOLON_SRP"
+    );
+
+    addComboItem(
+        printerTypeCombo_,
+        L"BIXOLON_BK"
+    );
+
+    addComboItem(
+        printerTypeCombo_,
         L"EPSON"
     );
 

@@ -10,6 +10,8 @@ class SerialPort;
 enum class PrinterType {
     Auto,
     Bixolon,
+    BixolonSrp,
+    BixolonBk,
     Epson
 };
 

@@ -182,7 +182,8 @@ PE_Result pe_initialize(
         return PE_ERROR_NOT_INITIALIZED;
     }
 
-    printer->printerType = printer->backend->name();
+    printer->printerType = actualType == PrinterType::Bixolon
+        ? "BIXOLON" : printer->backend->name();
 
     // port가 없는 경우에는 내장 방식 / 다른 전송 방식으로 사용할 수 있도록
     // 정상 초기화 상태로 처리

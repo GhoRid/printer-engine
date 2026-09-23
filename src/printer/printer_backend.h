@@ -9,7 +9,8 @@ class SerialPort;
 class PrinterBackend
 {
 public:
-    explicit PrinterBackend(SerialPort& serialPort, int dpi = 203);
+    explicit PrinterBackend(SerialPort& serialPort, int dpi = 203,
+                            bool skipMotionUnitsCommand = false);
     virtual ~PrinterBackend() = default;
 
     virtual const char* name() const = 0;
@@ -33,6 +34,7 @@ public:
 protected:
     SerialPort& serialPort_;
     int dpi_;
+    bool skipMotionUnitsCommand_;
 
     bool send(const std::vector<std::uint8_t>& data);
     bool send(const std::string& data);

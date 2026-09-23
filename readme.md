@@ -117,6 +117,15 @@ printer.setForms({
 
 `initialize()`를 다시 호출하면 기존 포트를 닫고 새 설정으로 연결합니다. 사용이 끝나면 `shutdown()`을 호출하세요.
 
+`printerType`의 기본값 `AUTO`는 기존처럼 프린터를 감지합니다. 빅솔론으로 확인되면
+모델명도 조회하여 BK3/BK5-3 계열은 `BIXOLON_BK` 프로파일을 사용합니다. 모델명 응답이
+없으면 기존 `BIXOLON` 동작을 유지합니다. 문제가 있는 BK 모델은
+`printerType: "BIXOLON_BK"`로 직접 지정할 수도 있습니다.
+
+`BIXOLON_BK`는 초기화 때 `GS P C8 C8`을 보내지 않습니다. BK 명령 체계에서는 `GS P`가
+바코드 정렬 명령이기 때문입니다. `BIXOLON_SRP`, `EPSON`과 기존 `BIXOLON` 설정은
+기존 초기화 명령을 사용합니다. 이전 `"BK3-31"` 설정도 BK 프로파일의 별칭으로 지원합니다.
+
 ## C++ 빌드
 
 ### macOS

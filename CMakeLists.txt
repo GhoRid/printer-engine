@@ -269,3 +269,15 @@ add_test(
     NAME layout_engine_test
     COMMAND layout_engine_test
 )
+
+add_executable(
+    printer_backend_test
+    tests/printer_backend_test.cpp
+    src/printer/printer_backend.cpp
+    src/printer/printer_factory.cpp
+    src/printer/printer_detect.cpp
+    src/printer/bixolon/bixolon_backend.cpp
+    src/printer/epson/epson_backend.cpp
+)
+target_include_directories(printer_backend_test PRIVATE ${PRINTER_ENGINE_INTERNAL_INCLUDE_DIRS})
+add_test(NAME printer_backend_test COMMAND printer_backend_test)

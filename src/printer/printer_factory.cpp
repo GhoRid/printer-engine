@@ -9,6 +9,8 @@ std::optional<PrinterType> parsePrinterType(std::string_view value)
 {
     if (value == "AUTO") return PrinterType::Auto;
     if (value == "BIXOLON") return PrinterType::Bixolon;
+    if (value == "BIXOLON_SRP") return PrinterType::BixolonSrp;
+    if (value == "BIXOLON_BK" || value == "BK3-31") return PrinterType::BixolonBk;
     if (value == "EPSON") return PrinterType::Epson;
     return std::nullopt;
 }
@@ -26,6 +28,8 @@ std::unique_ptr<PrinterBackend> createPrinterBackend(
     }
 
     return std::unique_ptr<PrinterBackend>(
-        new (std::nothrow) BixolonBackend(serialPort, dpi)
+        new (std::nothrow) BixolonBackend(
+            serialPort, dpi, type == PrinterType::BixolonBk
+        )
     );
 }

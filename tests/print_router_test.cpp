@@ -26,6 +26,13 @@ int main()
     config.printer_type = "AUTO";
     assert(pe_initialize(printer, &config) == PE_OK);
     assert(std::string(pe_get_printer_type(printer)) == "BIXOLON");
+    config.printer_type = "BIXOLON_SRP";
+    assert(pe_initialize(printer, &config) == PE_OK);
+    assert(std::string(pe_get_printer_type(printer)) == "BIXOLON_SRP");
+    config.printer_type = "BIXOLON_BK";
+    assert(pe_initialize(printer, &config) == PE_OK);
+    assert(std::string(pe_get_printer_type(printer)) == "BIXOLON_BK");
+    config.printer_type = "AUTO";
     config.text_width_columns = 48;
     assert(pe_initialize(printer, &config) == PE_ERROR_INVALID_ARGUMENT);
     config.padding_left_dots = 0;
@@ -37,6 +44,7 @@ int main()
         std::string_view("_EPSON\0", 7)
     ) == PrinterType::Epson);
     assert(detectPrinterTypeFromResponse("BIXOLON") == PrinterType::Bixolon);
+    assert(detectPrinterTypeFromResponse("_BK3-31") == PrinterType::BixolonBk);
 
     assert(routePrintRequest(
         "/print/receipt",

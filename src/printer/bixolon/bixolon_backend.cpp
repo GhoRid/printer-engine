@@ -2,5 +2,5 @@
 
 const char* BixolonBackend::name() const
 {
-    return "BIXOLON";
+    return skipMotionUnitsCommand_ ? "BIXOLON_BK" : "BIXOLON_SRP";
 }
