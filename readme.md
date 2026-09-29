@@ -221,6 +221,10 @@ npm pack --dry-run
 npm publish
 ```
 
+GitHub Actions 배포는 npm의 Trusted Publisher에 `GhoRid/printer-engine`의
+`build-windows.yml`을 등록한 뒤 `vX.Y.Z` 형식으로 패키지 버전과 일치하는 태그를 푸시합니다.
+태그 실행에서 Windows 바이너리를 빌드하고 테스트한 다음 npm에 게시합니다.
+
 ## 참고
 
 - `Win32` = 32비트

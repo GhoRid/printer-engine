@@ -1,6 +1,7 @@
 {
   "name": "@ghorid/printer-engine",
-  "version": "0.5.1",
+  "version": "0.5.2",
+  "repository": "github:GhoRid/printer-engine",
   "main": "node/index.js",
   "types": "node/index.d.ts",
   "files": [
