@@ -519,6 +519,11 @@ void AppController::createWindowControls()
         L"EPSON"
     );
 
+    addComboItem(
+        printerTypeCombo_,
+        L"RX831"
+    );
+
     // COM 포트
     createLabel(
         L"COM 포트",

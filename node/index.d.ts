@@ -2,6 +2,7 @@
 export type PrinterType =
   | 'AUTO'
   | 'EPSON'
+  | 'RX831'
   | 'BIXOLON_SRP'
   | 'BIXOLON_BK'
   | 'BIXOLON' // 이전 설정과 호환

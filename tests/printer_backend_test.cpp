@@ -24,7 +24,11 @@ bool SerialPort::write(const void* data, std::size_t size)
 {
     const auto* bytes = static_cast<const std::uint8_t*>(data);
     sent.insert(sent.end(), bytes, bytes + size);
-    if (size == 3 && bytes[0] == 0x1D && bytes[1] == 0x49) {
+    if (size == 3 &&
+        ((bytes[0] == 0x1D && bytes[1] == 0x49) ||
+         (bytes[0] == 0x1B && bytes[1] == 0x51))) {
+        if (bytes[0] == 0x1D && makerResponse.find("REXOD") != std::string::npos)
+            return true;
         if (bytes[2] == 0x42) response = makerResponse;
         if (bytes[2] == 0x43) response = modelResponse;
     }
@@ -53,6 +57,23 @@ int main()
     makerResponse = std::string("_EPSON\0", 7);
     assert(detectPrinterType(serialPort) == PrinterType::Epson);
     assert((sent == std::vector<std::uint8_t>{0x1D, 0x49, 0x42}));
+    sent.clear();
+
+    makerResponse = std::string("_REXOD\0", 7);
+    modelResponse = std::string("_RX831-V120\0", 12);
+    assert(detectPrinterType(serialPort) == PrinterType::Rx831);
+    assert((sent == std::vector<std::uint8_t>{
+        0x1D, 0x49, 0x42, 0x1B, 0x51, 0x42, 0x1B, 0x51, 0x43
+    }));
+    assert(parsePrinterType("RX831") == PrinterType::Rx831);
+    sent.clear();
+    auto rx831 = createPrinterBackend(PrinterType::Rx831, serialPort, 203);
+    assert(std::string(rx831->name()) == "RX831");
+    assert(rx831->initialize());
+    assert(rx831->printQr("ABC", 8));
+    assert((sent == std::vector<std::uint8_t>{
+        0x1B, 0x40, 0x1D, 0x6C, 0, 0, 0, 8, 3, 0, 'A', 'B', 'C'
+    }));
     sent.clear();
 
     auto bixolon = createPrinterBackend(PrinterType::Bixolon, serialPort, 203);

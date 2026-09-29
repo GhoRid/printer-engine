@@ -9,9 +9,12 @@
 
 namespace {
 
-std::string queryPrinterInfo(SerialPort& serialPort, unsigned char id)
+std::string queryPrinterInfo(SerialPort& serialPort, unsigned char id, bool rexod = false)
 {
-    const std::array<unsigned char, 3> command{0x1D, 0x49, id};
+    const std::array<unsigned char, 3> command{
+        static_cast<unsigned char>(rexod ? 0x1B : 0x1D),
+        static_cast<unsigned char>(rexod ? 0x51 : 0x49), id
+    };
     serialPort.discardInput();
     if (!serialPort.write(command.data(), command.size())) return {};
 
@@ -50,6 +53,10 @@ PrinterType detectPrinterTypeFromResponse(std::string_view response)
         return PrinterType::Epson;
     }
 
+    if (uppercase.find("RX831") != std::string::npos) {
+        return PrinterType::Rx831;
+    }
+
     return PrinterType::Bixolon;
 }
 
@@ -57,11 +64,17 @@ PrinterType detectPrinterType(SerialPort& serialPort)
 {
     // GS I 66: 제조사, GS I 67: 모델명. 응답이 없으면 기존 BIXOLON 동작을 유지한다.
     const std::string maker = queryPrinterInfo(serialPort, 0x42);
-    if (detectPrinterTypeFromResponse(maker) == PrinterType::Epson) {
-        return PrinterType::Epson;
+    const PrinterType makerType = detectPrinterTypeFromResponse(maker);
+    if (makerType == PrinterType::Epson || makerType == PrinterType::Rx831) {
+        return makerType;
     }
     if (maker.find("BIXOLON") != std::string::npos) {
         return detectPrinterTypeFromResponse(queryPrinterInfo(serialPort, 0x43));
+    }
+    const std::string rexodMaker = queryPrinterInfo(serialPort, 0x42, true);
+    if (rexodMaker.find("REXOD") != std::string::npos ||
+        maker.find("REXOD") != std::string::npos) {
+        return detectPrinterTypeFromResponse(queryPrinterInfo(serialPort, 0x43, true));
     }
     return PrinterType::Bixolon;
 }

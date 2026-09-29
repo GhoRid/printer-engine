@@ -12,7 +12,8 @@ enum class PrinterType {
     Bixolon,
     BixolonSrp,
     BixolonBk,
-    Epson
+    Epson,
+    Rx831
 };
 
 std::optional<PrinterType> parsePrinterType(std::string_view value);
