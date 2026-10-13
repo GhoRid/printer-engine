@@ -70,9 +70,11 @@ int main()
     auto rx831 = createPrinterBackend(PrinterType::Rx831, serialPort, 203);
     assert(std::string(rx831->name()) == "RX831");
     assert(rx831->initialize());
+    assert(rx831->alignCenter());
     assert(rx831->printQr("ABC", 8));
     assert((sent == std::vector<std::uint8_t>{
-        0x1B, 0x40, 0x1D, 0x6C, 0, 0, 0, 8, 3, 0, 'A', 'B', 'C'
+        0x1B, 0x40, 0x1B, 0x61, 1, 0x1D, 0x50, 1,
+        0x1D, 0x6C, 0, 0, 0, 8, 3, 0, 'A', 'B', 'C'
     }));
     sent.clear();
 

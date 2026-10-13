@@ -10,6 +10,18 @@ class Rx831Backend final : public PrinterBackend {
 public:
     using PrinterBackend::PrinterBackend;
     const char* name() const override { return "RX831"; }
+    bool alignLeft() override
+    {
+        return PrinterBackend::alignLeft() && send(std::vector<std::uint8_t>{0x1D, 0x50, 0});
+    }
+    bool alignCenter() override
+    {
+        return PrinterBackend::alignCenter() && send(std::vector<std::uint8_t>{0x1D, 0x50, 1});
+    }
+    bool alignRight() override
+    {
+        return PrinterBackend::alignRight() && send(std::vector<std::uint8_t>{0x1D, 0x50, 2});
+    }
     bool printQr(const std::string& value, int moduleSize = 8) override
     {
         if (value.empty() || value.size() > 230 || moduleSize < 1 || moduleSize > 18)
